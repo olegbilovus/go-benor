@@ -1,6 +1,6 @@
 module go-benor
 
-go 1.23
+go 1.22.2
 
 require (
 	github.com/schollz/progressbar/v3 v3.17.1

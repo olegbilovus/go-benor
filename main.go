@@ -23,6 +23,7 @@ func benOr(v V, p int) {
 	var y V = NULL
 	for s := 1; s <= S; s++ {
 		_ = bar.Add(1) // progress bar
+
 		// ###### Round 1 ######
 		log.Debugf("###### %v START r:%v s:%v", p, 1, s)
 		broadcast(p, 1, s, x)
@@ -48,7 +49,7 @@ func benOr(v V, p int) {
 		for _, msg := range msgsR2 {
 			countR2[msg.v] += 1
 			if countR2[msg.v] >= majority && msg.v != NULL {
-				log.Debugf("P%v DECIDED: %v\n", p, msg)
+				log.Debugf("P%v DECIDED: %v", p, msg)
 				pDecisions[p] = msg.v
 				break
 			} else if msg.v != NULL {
@@ -69,30 +70,30 @@ func benOr(v V, p int) {
 }
 
 func broadcast(p int, r int, s int, v V) {
+	msg := &Message{
+		r: r,
+		s: s,
+		v: v,
+		p: p,
+	}
+
 	for i, pMsgQueue := range pMessageQueues {
-		msg := &Message{
-			r: r,
-			s: s,
-			v: v,
-			p: p,
-		}
 		pMsgQueue.Queue(msg)
-		log.Debugf("%v sent %v to %v\n", p, msg, i)
+		log.Debugf("%v sent %v to %v", p, msg, i)
 	}
 }
 
 func gather(p int, r int, s int) []*Message {
 	var msgs []*Message
-
 	msgQueue := pMessageQueues[p]
 
 	for len(msgs) < n-f {
 		msg := msgQueue.Dequeue()
 		if msg.r == r && msg.s == s {
 			msgs = append(msgs, msg)
-			log.Debugf("%v received %v from %v\n", p, msg, msg.p)
+			log.Debugf("%v received %v from %v", p, msg, msg.p)
 		} else {
-			log.Debugf("%v discarted %v from %v\n", p, msg, msg.p)
+			log.Debugf("%v discarted %v from %v", p, msg, msg.p)
 		}
 
 	}

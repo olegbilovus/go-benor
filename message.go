@@ -26,7 +26,7 @@ func (mq *MessageQueue) Queue(msg *Message) {
 
 }
 
-const popSleep = 50 * time.Millisecond
+const dequeueSleep = 100 * time.Millisecond
 
 func (mq *MessageQueue) Dequeue() *Message {
 	var msg *Message
@@ -36,7 +36,7 @@ func (mq *MessageQueue) Dequeue() *Message {
 			msg = o.(*Message)
 			break
 		}
-		time.Sleep(popSleep)
+		time.Sleep(dequeueSleep)
 	}
 	return msg
 }
