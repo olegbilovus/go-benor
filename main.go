@@ -126,6 +126,7 @@ func gather(p int, r int, s int) []*Message {
 
 	for len(msgs) < n-f {
 		msg := msgQueue.Dequeue()
+  // TODO: do not delete the messages which have msg.s > s because we neeed em later
 		if msg.r == r && msg.s == s {
 			msgs = append(msgs, msg)
 			log.Debugf("%v received %v from %v", p, msg, msg.p)
