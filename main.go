@@ -42,9 +42,10 @@ func (s *Stop) stop() bool {
 func benOr(v V, p int) {
 	x := v
 	var y V = NULL
-	for s := 1; s <= S; s++ {
+	for s := 0; s < S; s++ {
 		_ = bar.Add(1) // progress bar
 
+		// TODO: Remove locks from the method
 		if shouldStop.stop() {
 			pStopped[p] = true
 			_ = bar.Add(S - s)
@@ -125,8 +126,10 @@ func gather(p int, r int, s int) []*Message {
 	msgQueue := pMessageQueues[p]
 
 	for len(msgs) < n-f {
-		msg := msgQueue.Dequeue()
-  // TODO: do not delete the messages which have msg.s > s because we neeed em later
+		msg := msgQueue.Dequeue(r, s)
+		if TERMINATE && decision.Load() != nil {
+			break
+		}
 		if msg.r == r && msg.s == s {
 			msgs = append(msgs, msg)
 			log.Debugf("%v received %v from %v", p, msg, msg.p)
@@ -206,8 +209,15 @@ func main() {
 	pStopped = make([]bool, n)
 	for i := 0; i < len(pMessageQueues); i++ {
 		msgQueue := &MessageQueue{
-			messages: lockfree.NewQueue(),
+			messagesR1: make(map[int]*lockfree.Queue),
+			messagesR2: make(map[int]*lockfree.Queue),
 		}
+
+		for s := range S {
+			msgQueue.messagesR1[s] = lockfree.NewQueue()
+			msgQueue.messagesR2[s] = lockfree.NewQueue()
+		}
+
 		pMessageQueues[i] = msgQueue
 
 		pDecisions[i] = V(-1)

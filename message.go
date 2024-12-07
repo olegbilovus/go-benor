@@ -18,20 +18,29 @@ func (m *Message) String() string {
 }
 
 type MessageQueue struct {
-	messages *lockfree.Queue
+	messagesR1 map[int]*lockfree.Queue
+	messagesR2 map[int]*lockfree.Queue
 }
 
 func (mq *MessageQueue) Queue(msg *Message) {
-	mq.messages.Enqueue(msg)
+	if msg.r == 1 {
+		mq.messagesR1[msg.s].Enqueue(msg)
+	} else {
+		mq.messagesR2[msg.s].Enqueue(msg)
+	}
 
 }
 
 const dequeueSleep = 100 * time.Millisecond
 
-func (mq *MessageQueue) Dequeue() *Message {
+func (mq *MessageQueue) Dequeue(r int, s int) *Message {
 	var msg *Message
+	msgQueue := mq.messagesR1
+	if r == 2 {
+		msgQueue = mq.messagesR2
+	}
 	for {
-		o := mq.messages.Dequeue()
+		o := msgQueue[s].Dequeue()
 		if o != nil {
 			msg = o.(*Message)
 			break
