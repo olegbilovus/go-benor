@@ -80,14 +80,15 @@ func benOr(v V, p int) {
 		countR2 := map[V]int{}
 		for _, msg := range msgsR2 {
 			countR2[msg.v] += 1
-			if countR2[msg.v] >= majority && msg.v != NULL {
+			if msg.v != NULL && countR2[msg.v] >= majority {
 				log.Debugf("P%v DECIDED: %v", p, msg)
 				pDecisions[p] = msg.v
-
+				x = msg.v
 				if TERMINATE {
 					decision.Store(msg.v)
 					return
 				}
+				break
 			} else if msg.v != NULL {
 				x = msg.v
 			}
