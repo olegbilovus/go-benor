@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	log "github.com/sirupsen/logrus"
+	"golang.design/x/lockfree"
 	"math"
 	"math/rand/v2"
 	"strconv"
@@ -75,7 +76,7 @@ func broadcast(p int, r int, s int, v V) {
 			v: v,
 			p: p,
 		}
-		pMsgQueue.Add(msg)
+		pMsgQueue.Queue(msg)
 		log.Debugf("%v sent %v to %v\n", p, msg, i)
 	}
 }
@@ -86,7 +87,7 @@ func gather(p int, r int, s int) []*Message {
 	msgQueue := pMessageQueues[p]
 
 	for len(msgs) < n-f {
-		msg := msgQueue.Pop()
+		msg := msgQueue.Dequeue()
 		if msg.r == r && msg.s == s {
 			msgs = append(msgs, msg)
 			log.Debugf("%v received %v from %v\n", p, msg, msg.p)
@@ -159,10 +160,8 @@ func main() {
 	pDecisions = make([]V, n)
 	for i := 0; i < len(pMessageQueues); i++ {
 		msgQueue := &MessageQueue{
-			messages: make([]*Message, 0),
-			mu:       sync.Mutex{},
+			messages: lockfree.NewQueue(),
 		}
-		msgQueue.notEmpty = sync.NewCond(&msgQueue.mu)
 		pMessageQueues[i] = msgQueue
 
 		pDecisions[i] = V(-1)

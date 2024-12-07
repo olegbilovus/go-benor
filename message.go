@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"sync"
+	"golang.design/x/lockfree"
+	"time"
 )
 
 type Message struct {
@@ -17,30 +18,25 @@ func (m *Message) String() string {
 }
 
 type MessageQueue struct {
-	messages []*Message
-	mu       sync.Mutex
-	notEmpty *sync.Cond
+	messages *lockfree.Queue
 }
 
-func (mq *MessageQueue) Add(msg *Message) {
-	mq.mu.Lock()
-	defer mq.mu.Unlock()
-
-	mq.messages = append(mq.messages, msg)
-	mq.notEmpty.Broadcast()
+func (mq *MessageQueue) Queue(msg *Message) {
+	mq.messages.Enqueue(msg)
 
 }
 
-func (mq *MessageQueue) Pop() *Message {
-	mq.notEmpty.L.Lock()
-	defer mq.mu.Unlock()
+const popSleep = 50 * time.Millisecond
 
-	for !(len(mq.messages) > 1) {
-		mq.notEmpty.Wait()
+func (mq *MessageQueue) Dequeue() *Message {
+	var msg *Message
+	for {
+		o := mq.messages.Dequeue()
+		if o != nil {
+			msg = o.(*Message)
+			break
+		}
+		time.Sleep(popSleep)
 	}
-
-	msg := mq.messages[0]
-	mq.messages = mq.messages[1:]
-
 	return msg
 }
