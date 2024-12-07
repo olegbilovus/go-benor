@@ -21,7 +21,7 @@ const NULL = -1
 func shouldStop() bool {
 	fCountLocal := fCount.Load()
 	if fCountLocal < fUint64 {
-		if stop := (rand.Uint()-rand.Uint())%4 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
+		if stop := (rand.Uint32()-rand.Uint32())%4 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
 			return true
 		}
 	}
