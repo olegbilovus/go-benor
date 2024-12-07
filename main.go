@@ -21,7 +21,7 @@ const NULL = -1
 func shouldStop() bool {
 	fCountLocal := fCount.Load()
 	if fCountLocal < fUint64 {
-		if stop := (rand.Uint32()-rand.Uint32())%4 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
+		if stop := rand.Uint32()%21 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
 			return true
 		}
 	}
@@ -106,7 +106,7 @@ func broadcast(p int, r int, s int, v V) {
 	}
 
 	for i, pMsgQueue := range pMessageQueues {
-		pMsgQueue.Queue(msg)
+		pMsgQueue.Enqueue(msg)
 		log.Debugf("%v sent %v to %v", p, msg, i)
 	}
 }

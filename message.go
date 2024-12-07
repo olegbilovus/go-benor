@@ -18,11 +18,12 @@ func (m *Message) String() string {
 }
 
 type MessageQueue struct {
+	// TODO: do not use maps, no thread safe for read and write
 	messagesR1 map[int]*lockfree.Queue
 	messagesR2 map[int]*lockfree.Queue
 }
 
-func (mq *MessageQueue) Queue(msg *Message) {
+func (mq *MessageQueue) Enqueue(msg *Message) {
 	if msg.r == 1 {
 		mq.messagesR1[msg.s].Enqueue(msg)
 	} else {
@@ -30,8 +31,6 @@ func (mq *MessageQueue) Queue(msg *Message) {
 	}
 
 }
-
-const dequeueSleep = 100 * time.Millisecond
 
 func (mq *MessageQueue) cleanOlds(r int, s int) {
 	msgQueue := mq.messagesR1
@@ -42,6 +41,8 @@ func (mq *MessageQueue) cleanOlds(r int, s int) {
 		delete(msgQueue, i)
 	}
 }
+
+const dequeueSleep = 50 * time.Millisecond
 
 func (mq *MessageQueue) Dequeue(r int, s int) *Message {
 	var msg *Message
