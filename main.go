@@ -18,21 +18,12 @@ type V int8
 
 const NULL = -1
 
-type Stop struct {
-	mu     sync.Mutex
-	fCount int
-}
-
-func (s *Stop) stop() bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.fCount < f {
-		if stop := (rand.Uint()-rand.Uint())%4 == 0; stop {
-			s.fCount += 1
+func shouldStop() bool {
+	fCountLocal := fCount.Load()
+	if fCountLocal < fUint64 {
+		if stop := (rand.Uint()-rand.Uint())%4 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
 			return true
 		}
-
 	}
 
 	return false
@@ -45,8 +36,7 @@ func benOr(v V, p int) {
 	for s := 0; s < S; s++ {
 		_ = bar.Add(1) // progress bar
 
-		// TODO: Remove locks from the method
-		if shouldStop.stop() {
+		if shouldStop() {
 			pStopped[p] = true
 			_ = bar.Add(S - s)
 			return
@@ -138,12 +128,14 @@ func gather(p int, r int, s int) []*Message {
 		}
 
 	}
+	msgQueue.cleanOlds(r, s)
 
 	return msgs
 }
 
 var n int
 var f int
+var fUint64 uint64
 var S int
 var majority int
 var verbose bool
@@ -153,7 +145,7 @@ var pDecisions []V
 var decision atomic.Value
 var TERMINATE bool
 
-var shouldStop = &Stop{}
+var fCount atomic.Uint64
 var pStopped []bool
 
 var bar *progressbar.ProgressBar
@@ -198,8 +190,10 @@ func main() {
 	if !(n > 2*f) {
 		log.Fatalf("Error: n > 2f is not respected. n: %v, f: %v. Max f values must be: %v\n", n, f, int(math.Floor(float64(n/2)))-1)
 	}
+	fUint64 = uint64(f)
 
 	majority = int(math.Floor(float64(n/2)) + 1)
+	fCount.Store(0)
 
 	// init global vars
 	bar = progressbar.Default(int64(n * S))
@@ -249,7 +243,7 @@ func main() {
 	}
 
 	fmt.Println("----- INFO -----")
-	fmt.Printf("n: %d, f: %d, majority: %d, fCount: %v\n", n, f, majority, shouldStop.fCount)
+	fmt.Printf("n: %d, f: %d, majority: %d, fCount: %v\n", n, f, majority, fCount.Load())
 
 	decided := false
 	for i := 0; i < n; i++ {

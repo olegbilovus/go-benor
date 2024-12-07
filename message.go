@@ -33,6 +33,16 @@ func (mq *MessageQueue) Queue(msg *Message) {
 
 const dequeueSleep = 100 * time.Millisecond
 
+func (mq *MessageQueue) cleanOlds(r int, s int) {
+	msgQueue := mq.messagesR1
+	if r == 2 {
+		msgQueue = mq.messagesR2
+	}
+	for i := range s {
+		delete(msgQueue, i)
+	}
+}
+
 func (mq *MessageQueue) Dequeue(r int, s int) *Message {
 	var msg *Message
 	msgQueue := mq.messagesR1
