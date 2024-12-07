@@ -18,12 +18,39 @@ type V int8
 
 const NULL = -1
 
+type Stop struct {
+	mu     sync.Mutex
+	fCount int
+}
+
+func (s *Stop) stop() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.fCount < f {
+		if stop := (rand.Uint()-rand.Uint())%4 == 0; stop {
+			s.fCount += 1
+			return true
+		}
+
+	}
+
+	return false
+}
+
 //goland:noinspection t
 func benOr(v V, p int) {
 	x := v
 	var y V = NULL
 	for s := 1; s <= S; s++ {
 		_ = bar.Add(1) // progress bar
+
+		if shouldStop.stop() {
+			pStopped[p] = true
+			_ = bar.Add(S - s)
+			return
+		}
+
 		if TERMINATE && decision.Load() != nil {
 			pDecisions[p] = decision.Load().(V)
 			return
@@ -121,6 +148,9 @@ var pDecisions []V
 var decision atomic.Value
 var TERMINATE bool
 
+var shouldStop = &Stop{}
+var pStopped []bool
+
 var bar *progressbar.ProgressBar
 
 //goland:noinspection t
@@ -171,6 +201,7 @@ func main() {
 
 	pMessageQueues = make([]*MessageQueue, n)
 	pDecisions = make([]V, n)
+	pStopped = make([]bool, n)
 	for i := 0; i < len(pMessageQueues); i++ {
 		msgQueue := &MessageQueue{
 			messages: lockfree.NewQueue(),
@@ -197,14 +228,25 @@ func main() {
 	}
 
 	fmt.Println("----- DECISIONS -----")
-	for i, decision := range pDecisions {
-		fmt.Printf("P_%v decided: %v\n", i, decision)
+	for i, pDecision := range pDecisions {
+		if pStopped[i] {
+			fmt.Printf("P_%v stopped\n", i)
+		} else {
+			fmt.Printf("P_%v decided: %v\n", i, pDecision)
+		}
 	}
 
 	fmt.Println("----- INFO -----")
-	fmt.Printf("n: %d, f: %d, majority: %d\n", n, f, majority)
+	fmt.Printf("n: %d, f: %d, majority: %d, fCount: %v\n", n, f, majority, shouldStop.fCount)
 
-	if pDecisions[0] == NULL {
+	decided := false
+	for i := 0; i < n; i++ {
+		if !pStopped[i] && pDecisions[i] != NULL {
+			decided = true
+			break
+		}
+	}
+	if !decided {
 		fmt.Print("Did NOT decided ")
 	} else {
 		fmt.Print("Decided ")
