@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"github.com/schollz/progressbar/v3"
+	log "github.com/sirupsen/logrus"
 	"math"
 	"math/rand/v2"
 	"strconv"
@@ -12,42 +13,6 @@ import (
 )
 
 type V int8
-type Message struct {
-	r int
-	s int
-	v V
-	p int
-}
-
-func (m *Message) String() string {
-	return fmt.Sprintf("(r:%v, s:%v, v:%v)", m.r, m.s, m.v)
-}
-
-type MessageQueue struct {
-	messages []*Message
-	mu       sync.Mutex
-	notEmpty *sync.Cond
-}
-
-func (mq *MessageQueue) Add(msg *Message) {
-	mq.mu.Lock()
-	mq.messages = append(mq.messages, msg)
-	mq.notEmpty.Broadcast()
-	mq.mu.Unlock()
-}
-
-func (mq *MessageQueue) Pop() *Message {
-	mq.notEmpty.L.Lock()
-	for !(len(mq.messages) > 1) {
-		mq.notEmpty.Wait()
-	}
-
-	msg := mq.messages[0]
-	mq.messages = mq.messages[1:]
-	mq.mu.Unlock()
-
-	return msg
-}
 
 const NULL = -1
 
@@ -55,10 +20,10 @@ const NULL = -1
 func benOr(v V, p int) {
 	x := v
 	var y V = NULL
-
 	for s := 1; s <= S; s++ {
+		_ = bar.Add(1) // progress bar
 		// ###### Round 1 ######
-		log.Printf("###### %v START r:%v s:%v", p, 1, s)
+		log.Debugf("###### %v START r:%v s:%v", p, 1, s)
 		broadcast(p, 1, s, x)
 		msgsR1 := gather(p, 1, s)
 
@@ -74,7 +39,7 @@ func benOr(v V, p int) {
 		}
 
 		// ###### Round 2 ######
-		log.Printf("###### %v START r:%v s:%v", p, 2, s)
+		log.Debugf("###### %v START r:%v s:%v", p, 2, s)
 		broadcast(p, 2, s, y)
 		msgsR2 := gather(p, 2, s)
 
@@ -82,7 +47,7 @@ func benOr(v V, p int) {
 		for _, msg := range msgsR2 {
 			countR2[msg.v] += 1
 			if countR2[msg.v] >= majority && msg.v != NULL {
-				log.Printf("P%v DECIDED: %v\n", p, msg)
+				log.Debugf("P%v DECIDED: %v\n", p, msg)
 				pDecisions[p] = msg.v
 				break
 			} else if msg.v != NULL {
@@ -92,7 +57,11 @@ func benOr(v V, p int) {
 
 		// if all the messages where NULL
 		if countR2[NULL] == len(msgsR2) {
-			x = V(rand.IntN(1))
+			x = V(0)
+			if rand.Int()%2 == 0 {
+				x = V(1)
+			}
+
 		}
 
 	}
@@ -107,7 +76,7 @@ func broadcast(p int, r int, s int, v V) {
 			p: p,
 		}
 		pMsgQueue.Add(msg)
-		log.Printf("%v sent %v to %v\n", p, msg, i)
+		log.Debugf("%v sent %v to %v\n", p, msg, i)
 	}
 }
 
@@ -120,9 +89,9 @@ func gather(p int, r int, s int) []*Message {
 		msg := msgQueue.Pop()
 		if msg.r == r && msg.s == s {
 			msgs = append(msgs, msg)
-			log.Printf("%v received %v from %v\n", p, msg, msg.p)
+			log.Debugf("%v received %v from %v\n", p, msg, msg.p)
 		} else {
-			log.Printf("%v discarted %v from %v\n", p, msg, msg.p)
+			log.Debugf("%v discarted %v from %v\n", p, msg, msg.p)
 		}
 
 	}
@@ -134,20 +103,26 @@ var n int
 var f int
 var S int
 var majority int
+var verbose bool
 
 var pMessageQueues []*MessageQueue
 var pDecisions []V
+
+var bar *progressbar.ProgressBar
 
 //goland:noinspection t
 func main() {
 	flag.IntVar(&n, "n", 3, "number of processors")
 	flag.IntVar(&f, "f", 1, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
+	flag.BoolVar(&verbose, "verbose", false, "print all the messages sent and received in real time")
 	initVals := flag.String("v", "", "initial values of the processors. Example: 1 0 1 1")
 	flag.Parse()
 
-	if !(n > 2*f) {
-		log.Fatalln("Error: n > 2f is not respected")
+	if verbose {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
 	}
 
 	var vi []V
@@ -160,6 +135,7 @@ func main() {
 			}
 			vi = append(vi, V(vInt))
 		}
+		n = len(sliceInitVals)
 	} else {
 		for i := 0; i < n; i++ {
 			viRand := 0
@@ -170,9 +146,15 @@ func main() {
 		}
 	}
 
+	if !(n > 2*f) {
+		log.Fatalf("Error: n > 2f is not respected. n: %v, f: %v. Max f values must be: %v\n", n, f, int(math.Floor(float64(n/2)))-1)
+	}
+
 	majority = int(math.Floor(float64(n/2)) + 1)
 
 	// init global vars
+	bar = progressbar.Default(int64(n * S))
+
 	pMessageQueues = make([]*MessageQueue, n)
 	pDecisions = make([]V, n)
 	for i := 0; i < len(pMessageQueues); i++ {
@@ -197,16 +179,16 @@ func main() {
 
 	wg.Wait()
 
-	log.Println("----- INFO -----")
-	log.Printf("n: %d, f: %d, majority: %d\n", n, f, majority)
+	fmt.Println("----- INFO -----")
+	fmt.Printf("n: %d, f: %d, majority: %d\n", n, f, majority)
 
-	log.Println("----- INIT VALUES -----")
+	fmt.Println("----- INIT VALUES -----")
 	for i, v := range vi {
-		log.Printf("v_%v: %v\n", i, v)
+		fmt.Printf("v_%v: %v\n", i, v)
 	}
 
-	log.Println("----- DECISIONS -----")
+	fmt.Println("----- DECISIONS -----")
 	for i, decision := range pDecisions {
-		log.Printf("%v decided: %v\n", i, decision)
+		fmt.Printf("P_%v decided: %v\n", i, decision)
 	}
 }
