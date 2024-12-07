@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type V int8
@@ -23,6 +24,10 @@ func benOr(v V, p int) {
 	var y V = NULL
 	for s := 1; s <= S; s++ {
 		_ = bar.Add(1) // progress bar
+		if TERMINATE && decision.Load() != nil {
+			pDecisions[p] = decision.Load().(V)
+			return
+		}
 
 		// ###### Round 1 ######
 		log.Debugf("###### %v START r:%v s:%v", p, 1, s)
@@ -51,7 +56,11 @@ func benOr(v V, p int) {
 			if countR2[msg.v] >= majority && msg.v != NULL {
 				log.Debugf("P%v DECIDED: %v", p, msg)
 				pDecisions[p] = msg.v
-				break
+
+				if TERMINATE {
+					decision.Store(msg.v)
+					return
+				}
 			} else if msg.v != NULL {
 				x = msg.v
 			}
@@ -109,6 +118,8 @@ var verbose bool
 
 var pMessageQueues []*MessageQueue
 var pDecisions []V
+var decision atomic.Value
+var TERMINATE bool
 
 var bar *progressbar.ProgressBar
 
@@ -117,6 +128,7 @@ func main() {
 	flag.IntVar(&n, "n", 3, "number of processors")
 	flag.IntVar(&f, "f", 1, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
+	flag.BoolVar(&TERMINATE, "terminate", false, "terminate after 1 process has decided")
 	flag.BoolVar(&verbose, "verbose", false, "print all the messages sent and received in real time")
 	initVals := flag.String("v", "", "initial values of the processors. Example: 1 0 1 1")
 	flag.Parse()
@@ -179,9 +191,6 @@ func main() {
 
 	wg.Wait()
 
-	fmt.Println("----- INFO -----")
-	fmt.Printf("n: %d, f: %d, majority: %d\n", n, f, majority)
-
 	fmt.Println("----- INIT VALUES -----")
 	for i, v := range vi {
 		fmt.Printf("v_%v: %v\n", i, v)
@@ -191,4 +200,14 @@ func main() {
 	for i, decision := range pDecisions {
 		fmt.Printf("P_%v decided: %v\n", i, decision)
 	}
+
+	fmt.Println("----- INFO -----")
+	fmt.Printf("n: %d, f: %d, majority: %d\n", n, f, majority)
+
+	if pDecisions[0] == NULL {
+		fmt.Print("Did NOT decided ")
+	} else {
+		fmt.Print("Decided ")
+	}
+	fmt.Printf("after %v/%v (%v%%) phases.\n", bar.State().CurrentNum/int64(n), S, bar.State().CurrentPercent*100)
 }

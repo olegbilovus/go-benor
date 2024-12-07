@@ -36,6 +36,10 @@ func (mq *MessageQueue) Dequeue() *Message {
 			msg = o.(*Message)
 			break
 		}
+		if TERMINATE && decision.Load() != nil {
+			msg = &Message{}
+			break
+		}
 		time.Sleep(dequeueSleep)
 	}
 	return msg
