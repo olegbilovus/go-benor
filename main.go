@@ -150,12 +150,12 @@ var bar *progressbar.ProgressBar
 
 //goland:noinspection t
 func main() {
-	flag.IntVar(&n, "n", 3, "number of processors")
+	flag.IntVar(&n, "n", 3, "number of processes")
 	flag.IntVar(&f, "f", 1, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
 	flag.BoolVar(&TERMINATE, "terminate", false, "terminate after 1 process has decided")
 	flag.BoolVar(&verbose, "verbose", false, "print all the messages sent and received in real time")
-	initVals := flag.String("v", "", "initial values of the processors. Example: 1 0 1 1")
+	initVals := flag.String("v", "", "initial values of the processes. Example: 1 0 1 1")
 	flag.Parse()
 
 	if verbose {
