@@ -250,7 +250,7 @@ func main() {
 
 	fmt.Println("----- INFO -----")
 	terminateProbability := 1 - math.Pow(1-(1/math.Pow(2, float64(n))), float64(S))
-	fmt.Printf("n: %d, f: %d, majority: %d, termProb:%.2f%%, fCount: %v\n", n, f, majority, terminateProbability*100, fCount.Load())
+	fmt.Printf("n: %d, f: %d, S: %d, majority: %d, termProb:%.2f%%, fCount: %v\n", n, f, S, majority, terminateProbability*100, fCount.Load())
 
 	decided := false
 	for i := 0; i < n; i++ {
