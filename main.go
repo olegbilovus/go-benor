@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/schollz/progressbar/v3"
 	log "github.com/sirupsen/logrus"
-	"golang.design/x/lockfree"
 	"math"
 	"math/rand/v2"
 	"strconv"
@@ -116,10 +115,10 @@ func gather(p int, r int, s int) []*Message {
 	msgQueue := pMessageQueues[p]
 
 	for len(msgs) < n-f {
-		msg := msgQueue.Dequeue(r, s)
 		if TERMINATE && decision.Load() != nil {
 			break
 		}
+		msg := msgQueue.Dequeue(r, s)
 		if msg.r == r && msg.s == s {
 			msgs = append(msgs, msg)
 			log.Debugf("%v received %v from %v", p, msg, msg.p)
@@ -202,13 +201,21 @@ func main() {
 	pStopped = make([]bool, n)
 	for i := 0; i < len(pMessageQueues); i++ {
 		msgQueue := &MessageQueue{
-			messagesR1: make(map[int]*lockfree.Queue),
-			messagesR2: make(map[int]*lockfree.Queue),
+			messagesR1: make(map[int][]*Message, S),
+			messagesR2: make(map[int][]*Message, S),
+
+			muR1: &sync.Mutex{},
+			muR2: &sync.Mutex{},
+
+			notEmptyR1: make(map[int]*sync.Cond, S),
+			notEmptyR2: make(map[int]*sync.Cond, S),
 		}
 
 		for s := range S {
-			msgQueue.messagesR1[s] = lockfree.NewQueue()
-			msgQueue.messagesR2[s] = lockfree.NewQueue()
+			msgQueue.messagesR1[s] = make([]*Message, 0)
+			msgQueue.messagesR2[s] = make([]*Message, 0)
+			msgQueue.notEmptyR1[s] = sync.NewCond(msgQueue.muR1)
+			msgQueue.notEmptyR2[s] = sync.NewCond(msgQueue.muR2)
 		}
 
 		pMessageQueues[i] = msgQueue
@@ -242,7 +249,8 @@ func main() {
 	}
 
 	fmt.Println("----- INFO -----")
-	fmt.Printf("n: %d, f: %d, majority: %d, fCount: %v\n", n, f, majority, fCount.Load())
+	terminateProbability := 1 - math.Pow(1-(1/math.Pow(2, float64(n))), float64(S))
+	fmt.Printf("n: %d, f: %d, majority: %d, termProb:%.2f%%, fCount: %v\n", n, f, majority, terminateProbability*100, fCount.Load())
 
 	decided := false
 	for i := 0; i < n; i++ {
