@@ -128,7 +128,6 @@ func gather(p int, r int, s int) []*Message {
 		}
 
 	}
-	msgQueue.cleanOlds(r, s)
 
 	return msgs
 }
