@@ -62,6 +62,23 @@ The option `--verbose` can be used to view every sent and received messages and 
 starts a new phase. Do not use this when using big `n` or `S` because the console outputs will slow
 down everything else. The progress bar will not be visible.
 
+### Output example for `go run .`
+```
+ 100% |██████████████████████████████████████████████████████| (30/30, 58173 it/s)        
+----- INIT VALUES -----
+v_0: 0
+v_1: 1
+v_2: 1
+----- DECISIONS -----
+P_0 decided: 0
+P_1 decided: 0
+P_2 stopped
+----- INFO -----
+n: 3, f: 1, S: 10, majority: 2, termProb:73.69%, fCount: 1
+Decided after 10/10 (100.00%) phases.
+```
+
+
 ## Resources usage
 
 For a big `n` or `S`, >= 10000, go-benor will start using a lot of memory and computation. At some
