@@ -264,5 +264,5 @@ func main() {
 	} else {
 		fmt.Print("Decided ")
 	}
-	fmt.Printf("after %v/%v (%v%%) phases.\n", bar.State().CurrentNum/int64(n), S, bar.State().CurrentPercent*100)
+	fmt.Printf("after %v/%v (%.2f%%) phases.\n", bar.State().CurrentNum/int64(n), S, bar.State().CurrentPercent*100)
 }
