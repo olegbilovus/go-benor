@@ -70,7 +70,7 @@ func benOr(v V, p int) {
 		countR2 := map[V]int{}
 		for _, msg := range msgsR2 {
 			countR2[msg.v] += 1
-			if msg.v != NULL && countR2[msg.v] >= majority {
+			if msg.v != NULL && countR2[msg.v] >= f + 1 {
 				log.Debugf("P%v DECIDED: %v", p, msg)
 				pDecisions[p] = msg.v
 				x = msg.v
