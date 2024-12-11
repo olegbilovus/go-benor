@@ -53,9 +53,6 @@ func (p *Process) gather() []*Message {
 	msgQueue := p.msgQueue
 
 	for len(msgs) < n-f {
-		if TERMINATE && decision.Load() != nil {
-			break
-		}
 		msg := msgQueue.Dequeue(p.r, p.s)
 		msgs = append(msgs, msg)
 
@@ -94,11 +91,6 @@ func benOr(p *Process) {
 			return
 		}
 
-		if TERMINATE && decision.Load() != nil {
-			p.decision = decision.Load().(V)
-			return
-		}
-
 		// ###### Round 1 ######
 		p.r = 1
 		log.Debugf("###### %v START r:%v s:%v", p.i, p.r, p.s)
@@ -129,11 +121,8 @@ func benOr(p *Process) {
 				log.Debugf("P%v DECIDED: %v", p, msg)
 				p.decision = msg.v
 				x = msg.v
-				if TERMINATE {
-					decision.Store(msg.v)
-					return
-				}
-				break
+
+				return
 			} else if msg.v != NULL {
 				x = msg.v
 			}
@@ -158,9 +147,6 @@ var S int
 var majority int
 var verbose bool
 
-var decision atomic.Value
-var TERMINATE bool
-
 var fCount atomic.Uint64
 
 var bar *progressbar.ProgressBar
@@ -170,7 +156,6 @@ func main() {
 	flag.IntVar(&n, "n", 3, "number of processes")
 	flag.IntVar(&f, "f", 1, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
-	flag.BoolVar(&TERMINATE, "terminate", false, "terminate after 1 process has decided")
 	flag.BoolVar(&verbose, "verbose", false, "print all the messages sent and received in real time")
 	initVals := flag.String("v", "", "initial values of the processes. Example: 1 0 1 1")
 	flag.Parse()

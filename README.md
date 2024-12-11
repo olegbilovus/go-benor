@@ -18,8 +18,6 @@ Usage of go-benor:
         max number of stops (default 1)
   -n int
         number of processes (default 3)
-  -terminate
-        terminate after 1 process has decided
   -v string
         initial values of the processes. Example: 1 0 1 1
   -verbose
@@ -55,8 +53,7 @@ After the computation is done, it will print in order:
     - number of processes needed for a majority: $\lfloor \frac{n}{2} \rfloor+ 1$
     - termination probability: $1 - (1 - \frac{1}{2^n})^S$
     - fCount: number of stopped processes
-    - How many phases were needed to decide. This is useful when using the `--terminate` options to
-      see how many phases were not computed
+    - How many phases were needed to decide.
 
 The option `--verbose` can be used to view every sent and received messages and when a process
 starts a new phase. Do not use this when using big `n` or `S` because the console outputs will slow
