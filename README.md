@@ -18,6 +18,8 @@ Usage of go-benor:
         max number of stops (default 1)
   -n int
         number of processes (default 3)
+  -threads int
+        number of threads to use. Defaults to number of vCPU (default 32)
   -v string
         initial values of the processes. Example: 1 0 1 1
   -verbose

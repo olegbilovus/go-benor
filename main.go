@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"math"
 	"math/rand/v2"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -172,9 +173,12 @@ func main() {
 	flag.IntVar(&n, "n", 3, "number of processes")
 	flag.IntVar(&f, "f", 1, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
+	threads := flag.Int("threads", runtime.NumCPU(), "number of threads to use. Defaults to number of vCPU")
 	flag.BoolVar(&verbose, "verbose", false, "print all the messages sent and received in real time")
 	initVals := flag.String("v", "", "initial values of the processes. Example: 1 0 1 1")
 	flag.Parse()
+
+	runtime.GOMAXPROCS(*threads)
 
 	if verbose {
 		log.SetLevel(log.DebugLevel)
