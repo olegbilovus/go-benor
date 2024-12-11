@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/schollz/progressbar/v3"
+	"github.com/sirupsen/logrus"
 	"math/rand/v2"
 	"sync/atomic"
 )
@@ -40,4 +41,29 @@ func randomVi(n int) []V {
 	}
 
 	return vi
+}
+
+type Logger struct {
+	verbose bool
+}
+
+type Fields map[string]interface{}
+
+func (l *Logger) Init() {
+	if l.verbose {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+}
+func (l *Logger) Debug(fields map[string]interface{}, msg string) {
+	if l.verbose {
+		logrus.WithFields(fields).Debugln(msg)
+	}
+}
+
+func (l *Logger) Fatalln(args ...interface{}) {
+	logrus.Fatalln(args)
+}
+
+func (l *Logger) Fatalf(s string, args ...interface{}) {
+	logrus.Fatalf(s, args)
 }

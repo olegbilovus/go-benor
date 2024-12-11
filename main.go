@@ -4,10 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/schollz/progressbar/v3"
-	log "github.com/sirupsen/logrus"
 	"math"
 	"math/rand/v2"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,30 +45,30 @@ func (p *Process) broadcast(v V) {
 		}
 		process.msgQueue.Enqueue(msg)
 
-		log.WithFields(log.Fields{
+		log.Debug(Fields{
 			"from": p.i,
 			"to":   process.i,
 			"data": msg,
-		}).Debugln("Message sent")
+		}, "Message sent")
 	}
 }
 
 func (p *Process) gather() []*Message {
-	log.WithFields(log.Fields{
+	log.Debug(Fields{
 		"p": p.i,
 		"r": p.r,
 		"s": p.s,
-	}).Debugln("Gathering")
+	}, "Gathering")
 
 	msgQueue := p.msgQueue
 	msgs := msgQueue.DequeueEnoughMsg(p.r, p.s)
 
 	for _, msg := range msgs {
-		log.WithFields(log.Fields{
+		log.Debug(Fields{
 			"from": msg.p,
 			"to":   p.i,
 			"data": msg,
-		}).Debugln("Message received")
+		}, "Message received")
 
 	}
 
@@ -96,11 +97,11 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.Pro
 		// ###### Round 1 ######
 		p.r = 1
 
-		log.WithFields(log.Fields{
+		log.Debug(Fields{
 			"p": p.i,
 			"r": p.r,
 			"s": p.s,
-		}).Debugln("START PHASE")
+		}, "START PHASE")
 
 		p.broadcast(x)
 		msgsR1 := p.gather()
@@ -119,11 +120,11 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.Pro
 		// ###### Round 2 ######
 		p.r = 2
 
-		log.WithFields(log.Fields{
+		log.Debug(Fields{
 			"p": p.i,
 			"r": p.r,
 			"s": p.s,
-		}).Debugln("START PHASE")
+		}, "START PHASE")
 
 		p.broadcast(y)
 		msgsR2 := p.gather()
@@ -134,11 +135,11 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.Pro
 			if msg.v != NULL && count[msg.v] >= f+1 {
 				p.decision = msg.v
 
-				log.WithFields(log.Fields{
+				log.Debug(Fields{
 					"p":        p.i,
 					"decision": p.decision,
 					"s":        p.s,
-				}).Debugln("DECIDED")
+				}, "DECIDED")
 
 				// you have to send you values to the next phase because some processes may need the to terminate
 				// otherwise, a rare deadlock may happen
@@ -206,8 +207,17 @@ func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
 	return &processes
 }
 
+var log = Logger{}
+
 //goland:noinspection t
 func main() {
+	file, err := os.Create("profile.prof")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	pprof.StartCPUProfile(file)
+	defer pprof.StopCPUProfile()
+
 	var n, f, S int
 
 	flag.IntVar(&n, "n", 3, "number of processes")
@@ -223,7 +233,8 @@ func main() {
 	runtime.GOMAXPROCS(*threads)
 
 	if !*quite && *verbose {
-		log.SetLevel(log.DebugLevel)
+		log.verbose = true
+		log.Init()
 	}
 
 	var vi []V
