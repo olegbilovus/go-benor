@@ -138,7 +138,7 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 					"s":        p.s,
 				}, "DECIDED")
 
-				// you have to send you values to the next phase because some processes may need the to terminate
+				// you have to send the values to the next phase because some processes may need them to terminate
 				// otherwise, a rare deadlock may happen
 				p.r = 1
 				p.s = p.s + 1
