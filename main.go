@@ -154,7 +154,7 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 			}
 		}
 
-		// if all the messages where NULL
+		// if all the messages were NULL
 		if count[NULL] == len(msgsR2) {
 			x = V(0)
 			if rand.Int()%2 == 0 {
