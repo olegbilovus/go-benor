@@ -87,13 +87,18 @@ func benOr(p *Process) {
 
 		if shouldStop() {
 			p.stopped = true
-			_ = bar.Add(S - p.s)
 			return
 		}
 
 		// ###### Round 1 ######
 		p.r = 1
-		log.Debugf("###### %v START r:%v s:%v", p.i, p.r, p.s)
+
+		log.WithFields(log.Fields{
+			"p": p.i,
+			"r": p.r,
+			"s": p.s,
+		}).Debugln("START PHASE")
+
 		p.broadcast(x)
 		msgsR1 := p.gather()
 
@@ -110,7 +115,13 @@ func benOr(p *Process) {
 
 		// ###### Round 2 ######
 		p.r = 2
-		log.Debugf("###### %v START r:%v s:%v", p.i, p.r, p.s)
+
+		log.WithFields(log.Fields{
+			"p": p.i,
+			"r": p.r,
+			"s": p.s,
+		}).Debugln("START PHASE")
+
 		p.broadcast(y)
 		msgsR2 := p.gather()
 
@@ -118,9 +129,14 @@ func benOr(p *Process) {
 		for _, msg := range msgsR2 {
 			countR2[msg.v] += 1
 			if msg.v != NULL && countR2[msg.v] >= f+1 {
-				log.Debugf("P%v DECIDED: %v", p, msg)
 				p.decision = msg.v
 				x = msg.v
+
+				log.WithFields(log.Fields{
+					"p":        p.i,
+					"decision": p.decision,
+					"s":        p.s,
+				}).Debugln("DECIDED")
 
 				return
 			} else if msg.v != NULL {
