@@ -61,9 +61,9 @@ func (l *Logger) Debug(fields map[string]interface{}, msg string) {
 }
 
 func (l *Logger) Fatalln(args ...interface{}) {
-	logrus.Fatalln(args)
+	logrus.Fatalln(args...)
 }
 
 func (l *Logger) Fatalf(s string, args ...interface{}) {
-	logrus.Fatalf(s, args)
+	logrus.Fatalf(s, args...)
 }
