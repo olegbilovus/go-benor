@@ -223,13 +223,7 @@ func main() {
 		}
 		n = len(sliceInitVals)
 	} else {
-		for i := 0; i < n; i++ {
-			viRand := 0
-			if rand.Int()%2 == 0 {
-				viRand = 1
-			}
-			vi = append(vi, V(viRand))
-		}
+		vi = randomVi(n)
 	}
 
 	if !(n > 2*f) {
@@ -282,6 +276,7 @@ func main() {
 			fmt.Printf("P_%v decided: %v\n", process.i, process.decision)
 		}
 	}
+	maxStates++
 
 	fmt.Println("----- INFO -----")
 	terminateProbability := 1 - math.Pow(1-(1/math.Pow(2, float64(n))), float64(S))

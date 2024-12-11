@@ -28,3 +28,16 @@ func resetCount(count map[V]int) {
 	count[1] = 0
 	count[NULL] = 0
 }
+
+func randomVi(n int) []V {
+	vi := make([]V, n)
+	for i := 0; i < n; i++ {
+		viRand := 0
+		if rand.Int()%2 == 0 {
+			viRand = 1
+		}
+		vi[i] = V(viRand)
+	}
+
+	return vi
+}
