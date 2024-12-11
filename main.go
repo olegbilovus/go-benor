@@ -26,7 +26,7 @@ type Process struct {
 	stopped  bool
 	msgQueue *MessageQueue
 
-	processes []*Process
+	processes *[]*Process
 }
 
 func (p *Process) broadcast(v V) {
@@ -37,7 +37,7 @@ func (p *Process) broadcast(v V) {
 		p: p.i,
 	}
 
-	for _, process := range p.processes {
+	for _, process := range *p.processes {
 		process.msgQueue.Enqueue(msg)
 
 		log.WithFields(log.Fields{
@@ -130,7 +130,6 @@ func benOr(p *Process) {
 			countR2[msg.v] += 1
 			if msg.v != NULL && countR2[msg.v] >= f+1 {
 				p.decision = msg.v
-				x = msg.v
 
 				log.WithFields(log.Fields{
 					"p":        p.i,
@@ -204,11 +203,11 @@ func main() {
 	}
 
 	if !(n > 2*f) {
-		log.Fatalf("Error: n > 2f is not respected. n: %v, f: %v. Max f values must be: %v\n", n, f, int(math.Floor(float64(n/2)))-1)
+		log.Fatalf("Error: n > 2f is not respected. n: %v, f: %v. Max f values must be: %v\n", n, f, int(n/2)-1)
 	}
 	fUint64 = uint64(f)
 
-	majority = int(math.Floor(float64(n/2)) + 1)
+	majority = int(n/2) + 1
 	fCount.Store(0)
 
 	bar = progressbar.Default(int64(n * S))
@@ -243,7 +242,7 @@ func main() {
 			decision:  NULL,
 			stopped:   false,
 			msgQueue:  msgQueue,
-			processes: processes,
+			processes: &processes,
 		}
 		processes[i] = process
 	}
