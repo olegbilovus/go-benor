@@ -23,8 +23,9 @@ type MessageQueue struct {
 	muR1 *sync.Mutex
 	muR2 *sync.Mutex
 
-	enoughMsgR1 map[int]*sync.Cond
-	enoughMsgR2 map[int]*sync.Cond
+	enoughMsg       int
+	enoughMsgCondR1 map[int]*sync.Cond
+	enoughMsgCondR2 map[int]*sync.Cond
 }
 
 func (mq *MessageQueue) Enqueue(msg *Message) {
@@ -32,11 +33,11 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 
 	msgs := mq.messagesR1
 	mu := mq.muR1
-	enoughMsg := mq.enoughMsgR1[s]
+	enoughMsgCond := mq.enoughMsgCondR1[s]
 	if r == 2 {
 		msgs = mq.messagesR2
 		mu = mq.muR2
-		enoughMsg = mq.enoughMsgR2[s]
+		enoughMsgCond = mq.enoughMsgCondR2[s]
 	}
 
 	mu.Lock()
@@ -56,23 +57,23 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 		mq.messagesR2[msg.s] = msgQueue
 	}
 
-	if len(msgQueue) >= n-f {
-		enoughMsg.Broadcast()
+	if len(msgQueue) >= mq.enoughMsg {
+		enoughMsgCond.Broadcast()
 	}
 }
 
 func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) []*Message {
 	msgs := mq.messagesR1
-	enoughMsg := mq.enoughMsgR1[s]
+	enoughMsgCond := mq.enoughMsgCondR1[s]
 	if r == 2 {
 		msgs = mq.messagesR2
-		enoughMsg = mq.enoughMsgR2[s]
+		enoughMsgCond = mq.enoughMsgCondR2[s]
 	}
 
-	enoughMsg.L.Lock()
-	defer enoughMsg.L.Unlock()
-	for len(msgs[s]) < n-f {
-		enoughMsg.Wait()
+	enoughMsgCond.L.Lock()
+	defer enoughMsgCond.L.Unlock()
+	for len(msgs[s]) < mq.enoughMsg {
+		enoughMsgCond.Wait()
 	}
 
 	msgsDequeued := msgs[s]

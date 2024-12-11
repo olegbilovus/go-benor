@@ -14,7 +14,7 @@ import (
 	"sync/atomic"
 )
 
-type V int8
+type V int
 
 const NULL = -1
 
@@ -68,27 +68,22 @@ func (p *Process) gather() []*Message {
 	return msgs
 }
 
-func shouldStop() bool {
-	fCountLocal := fCount.Load()
-	if fCountLocal < fUint64 {
-		if stop := rand.Uint32()%21 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
-			return true
-		}
-	}
-
-	return false
-}
-
 //goland:noinspection t
-func benOr(p *Process) {
+func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.ProgressBar) {
 	x := p.v
 	var y V = NULL
-	for p.s = 0; p.s < S; p.s++ {
-		_ = bar.Add(1) // progress bar
 
-		if shouldStop() {
+	fUint64 := uint64(f)
+	majority := int(len(*(p.processes))/2) + 1
+
+	count := make(map[V]int, 3) // 3 because it will only be 0, 1, -1
+
+	for p.s = 0; p.s < S; p.s++ {
+		progressAdd(bar, 1) // progress bar
+
+		if shouldStop(fUint64, fCount) {
 			p.stopped = true
-			_ = bar.Add(S - p.s)
+			progressAdd(bar, S-p.s)
 			return
 		}
 
@@ -104,10 +99,10 @@ func benOr(p *Process) {
 		p.broadcast(x)
 		msgsR1 := p.gather()
 
-		countR1 := map[V]int{}
+		resetCount(count)
 		for _, msg := range msgsR1 {
-			countR1[msg.v] += 1
-			if countR1[msg.v] >= majority {
+			count[msg.v] += 1
+			if count[msg.v] >= majority {
 				y = msg.v
 				break
 			} else {
@@ -127,10 +122,10 @@ func benOr(p *Process) {
 		p.broadcast(y)
 		msgsR2 := p.gather()
 
-		countR2 := map[V]int{}
+		resetCount(count)
 		for _, msg := range msgsR2 {
-			countR2[msg.v] += 1
-			if msg.v != NULL && countR2[msg.v] >= f+1 {
+			count[msg.v] += 1
+			if msg.v != NULL && count[msg.v] >= f+1 {
 				p.decision = msg.v
 
 				log.WithFields(log.Fields{
@@ -140,13 +135,14 @@ func benOr(p *Process) {
 				}).Debugln("DECIDED")
 
 				return
+
 			} else if msg.v != NULL {
 				x = msg.v
 			}
 		}
 
 		// if all the messages where NULL
-		if countR2[NULL] == len(msgsR2) {
+		if count[NULL] == len(msgsR2) {
 			x = V(0)
 			if rand.Int()%2 == 0 {
 				x = V(1)
@@ -157,33 +153,61 @@ func benOr(p *Process) {
 	}
 }
 
-var n int
-var f int
-var fUint64 uint64
-var S int
-var majority int
-var verbose bool
+func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
+	processes := make([]*Process, n)
+	for i := 0; i < n; i++ {
+		msgQueue := &MessageQueue{
+			messagesR1: make(map[int][]*Message, S),
+			messagesR2: make(map[int][]*Message, S),
 
-var fCount atomic.Uint64
+			muR1: &sync.Mutex{},
+			muR2: &sync.Mutex{},
 
-var bar *progressbar.ProgressBar
+			enoughMsg:       n - f,
+			enoughMsgCondR1: make(map[int]*sync.Cond, S),
+			enoughMsgCondR2: make(map[int]*sync.Cond, S),
+		}
+
+		for s := range S {
+			msgQueue.messagesR1[s] = make([]*Message, 0)
+			msgQueue.messagesR2[s] = make([]*Message, 0)
+			msgQueue.enoughMsgCondR1[s] = sync.NewCond(msgQueue.muR1)
+			msgQueue.enoughMsgCondR2[s] = sync.NewCond(msgQueue.muR2)
+		}
+
+		process := &Process{
+			i:         i,
+			v:         vi[i],
+			s:         0,
+			r:         1,
+			decision:  NULL,
+			stopped:   false,
+			msgQueue:  msgQueue,
+			processes: &processes,
+		}
+		processes[i] = process
+	}
+
+	return &processes
+}
 
 //goland:noinspection t
 func main() {
+	var n, f, S int
+
 	flag.IntVar(&n, "n", 3, "number of processes")
 	flag.IntVar(&f, "f", 1, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
 	threads := flag.Int("threads", runtime.NumCPU(), "number of threads to use. Defaults to number of vCPU")
-	flag.BoolVar(&verbose, "verbose", false, "print all the messages sent and received in real time")
+	verbose := flag.Bool("verbose", false, "print all the messages sent and received in real time")
+	disableProgressBar := flag.Bool("no-progress", false, "disable the progress bar")
 	initVals := flag.String("v", "", "initial values of the processes. Example: 1 0 1 1")
 	flag.Parse()
 
 	runtime.GOMAXPROCS(*threads)
 
-	if verbose {
+	if *verbose {
 		log.SetLevel(log.DebugLevel)
-	} else {
-		log.SetLevel(log.InfoLevel)
 	}
 
 	var vi []V
@@ -210,54 +234,23 @@ func main() {
 	if !(n > 2*f) {
 		log.Fatalf("Error: n > 2f is not respected. n: %v, f: %v. Max f values must be: %v\n", n, f, int(n/2)-1)
 	}
-	fUint64 = uint64(f)
 
-	majority = int(n/2) + 1
-	fCount.Store(0)
-
-	bar = progressbar.Default(int64(n * S))
-
-	// init processes
-	processes := make([]*Process, n)
-	var wg sync.WaitGroup
-	for i := 0; i < n; i++ {
-		msgQueue := &MessageQueue{
-			messagesR1: make(map[int][]*Message, S),
-			messagesR2: make(map[int][]*Message, S),
-
-			muR1: &sync.Mutex{},
-			muR2: &sync.Mutex{},
-
-			enoughMsgR1: make(map[int]*sync.Cond, S),
-			enoughMsgR2: make(map[int]*sync.Cond, S),
-		}
-
-		for s := range S {
-			msgQueue.messagesR1[s] = make([]*Message, 0)
-			msgQueue.messagesR2[s] = make([]*Message, 0)
-			msgQueue.enoughMsgR1[s] = sync.NewCond(msgQueue.muR1)
-			msgQueue.enoughMsgR2[s] = sync.NewCond(msgQueue.muR2)
-		}
-
-		process := &Process{
-			i:         i,
-			v:         vi[i],
-			s:         0,
-			r:         1,
-			decision:  NULL,
-			stopped:   false,
-			msgQueue:  msgQueue,
-			processes: &processes,
-		}
-		processes[i] = process
+	var bar *progressbar.ProgressBar = nil
+	if !*disableProgressBar {
+		bar = progressbar.Default(int64(n * S))
 	}
 
+	// init processes
+	processes := SetupProcesses(n, f, S, vi)
+
+	fCount := &atomic.Uint64{}
 	// start computation
+	var wg sync.WaitGroup
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			benOr(processes[i])
+			benOr((*processes)[i], S, f, fCount, bar)
 		}()
 	}
 
@@ -270,12 +263,16 @@ func main() {
 
 	decided := false
 	fmt.Println("----- DECISIONS -----")
-	for _, process := range processes {
+	maxStates := 0
+	for _, process := range *processes {
 		if process.stopped {
 			fmt.Printf("P_%v stopped\n", process.i)
 		} else {
 			if !decided && process.decision != NULL {
 				decided = true
+			}
+			if process.s > maxStates {
+				maxStates = process.s
 			}
 			fmt.Printf("P_%v decided: %v\n", process.i, process.decision)
 		}
@@ -283,12 +280,12 @@ func main() {
 
 	fmt.Println("----- INFO -----")
 	terminateProbability := 1 - math.Pow(1-(1/math.Pow(2, float64(n))), float64(S))
-	fmt.Printf("n: %d, f: %d, S: %d, majority: %d, termProb:%.2f%%, fCount: %v\n", n, f, S, majority, terminateProbability*100, fCount.Load())
+	fmt.Printf("n: %d, f: %d, S: %d, majority: %d, termProb:%.2f%%, fCount: %v\n", n, f, S, int(n/2)+1, terminateProbability*100, fCount.Load())
 
 	if !decided {
-		fmt.Print("Did NOT decided ")
+		fmt.Print("Did NOT decide ")
 	} else {
 		fmt.Print("Decided ")
 	}
-	fmt.Printf("after %v/%v (%.2f%%) phases.\n", bar.State().CurrentNum/int64(n), S, bar.State().CurrentPercent*100)
+	fmt.Printf("after %v/%v (%.2f%%) phases.\n", maxStates, S, float64(maxStates*100)/float64(S))
 }
