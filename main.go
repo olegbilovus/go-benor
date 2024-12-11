@@ -201,12 +201,13 @@ func main() {
 	threads := flag.Int("threads", runtime.NumCPU(), "number of threads to use. Defaults to number of vCPU")
 	verbose := flag.Bool("verbose", false, "print all the messages sent and received in real time")
 	disableProgressBar := flag.Bool("no-progress", false, "disable the progress bar")
+	quite := flag.Bool("quite", false, "no output")
 	initVals := flag.String("v", "", "initial values of the processes. Example: 1 0 1 1")
 	flag.Parse()
 
 	runtime.GOMAXPROCS(*threads)
 
-	if *verbose {
+	if !*quite && *verbose {
 		log.SetLevel(log.DebugLevel)
 	}
 
@@ -236,7 +237,7 @@ func main() {
 	}
 
 	var bar *progressbar.ProgressBar = nil
-	if !*disableProgressBar {
+	if !*disableProgressBar && !*quite {
 		bar = progressbar.Default(int64(n * S))
 	}
 
@@ -255,6 +256,10 @@ func main() {
 	}
 
 	wg.Wait()
+
+	if *quite {
+		return
+	}
 
 	fmt.Println("----- INIT VALUES -----")
 	for i, v := range vi {
