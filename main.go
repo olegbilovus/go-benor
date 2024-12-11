@@ -6,9 +6,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"math"
 	"math/rand/v2"
-	"os"
 	"runtime"
-	"runtime/pprof"
 	"strconv"
 	"strings"
 	"sync"
@@ -211,13 +209,6 @@ var log = Logger{}
 
 //goland:noinspection t
 func main() {
-	file, err := os.Create("profile.prof")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	pprof.StartCPUProfile(file)
-	defer pprof.StopCPUProfile()
-
 	var n, f, S int
 
 	flag.IntVar(&n, "n", 3, "number of processes")
