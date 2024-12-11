@@ -88,7 +88,6 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 
 		if shouldStop(fUint64, fCount, odds) {
 			p.stopped = true
-			progressAdd(bar, S-p.s)
 			return
 		}
 
