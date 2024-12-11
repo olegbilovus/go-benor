@@ -74,7 +74,7 @@ func (p *Process) gather() []*Message {
 }
 
 //goland:noinspection t
-func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.ProgressBar) {
+func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *progressbar.ProgressBar) {
 	x := p.v
 	var y V = NULL
 
@@ -86,7 +86,7 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.Pro
 	for p.s = 0; p.s < S; p.s++ {
 		progressAdd(bar, 1) // progress bar
 
-		if shouldStop(fUint64, fCount) {
+		if shouldStop(fUint64, fCount, odds) {
 			p.stopped = true
 			progressAdd(bar, S-p.s)
 			return
@@ -211,9 +211,10 @@ var log = Logger{}
 func main() {
 	var n, f, S int
 
-	flag.IntVar(&n, "n", 3, "number of processes")
-	flag.IntVar(&f, "f", 1, "max number of stops")
+	flag.IntVar(&n, "n", 10, "number of processes")
+	flag.IntVar(&f, "f", 4, "max number of stops")
 	flag.IntVar(&S, "S", 10, "number of phases")
+	odds := flag.Float64("odds", 0.05, "the odds of a process to stop. Valid values from 0.0 to 1.0")
 	threads := flag.Int("threads", runtime.NumCPU(), "number of threads to use. Defaults to number of vCPU")
 	verbose := flag.Bool("verbose", false, "print all the messages sent and received in real time")
 	disableProgressBar := flag.Bool("no-progress", false, "disable the progress bar")
@@ -222,6 +223,10 @@ func main() {
 	flag.Parse()
 
 	runtime.GOMAXPROCS(*threads)
+
+	if *odds < 0.0 || *odds > 1.0 {
+		log.Fatalf("Odds must be a value between 0.0 and 1.0. \"%f\" is not valid.", *odds)
+	}
 
 	if !*quite && *verbose {
 		log.verbose = true
@@ -262,7 +267,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			benOr((*processes)[i], S, f, fCount, bar)
+			benOr((*processes)[i], S, f, fCount, *odds, bar)
 		}()
 	}
 
@@ -282,7 +287,7 @@ func main() {
 	maxStates := 1
 	for _, process := range *processes {
 		if process.stopped {
-			fmt.Printf("P_%v stopped\n", process.i)
+			fmt.Printf("P_%v stopped ", process.i)
 		} else {
 			if !decided && process.decision != NULL {
 				decided = true
@@ -290,13 +295,18 @@ func main() {
 			if process.s > maxStates {
 				maxStates = process.s
 			}
-			fmt.Printf("P_%v decided: %v\n", process.i, process.decision)
+			fmt.Printf("P_%v decided: %v ", process.i, process.decision)
 		}
+		whenDecided := process.s
+		if whenDecided == 0 {
+			whenDecided = 1
+		}
+		fmt.Printf("at s:%d\n", whenDecided)
 	}
 
 	fmt.Println("----- INFO -----")
 	terminateProbability := 1 - math.Pow(1-(1/math.Pow(2, float64(n))), float64(S))
-	fmt.Printf("n: %d, f: %d, S: %d, majority: %d, termProb:%.2f%%, fCount: %v\n", n, f, S, int(n/2)+1, terminateProbability*100, fCount.Load())
+	fmt.Printf("n: %d, f: %d, S: %d, majority: %d, termProb:%.2f%%, fCount: %v, odds of stopping: %f%%\n", n, f, S, int(n/2)+1, terminateProbability*100, fCount.Load(), *odds)
 
 	if !decided {
 		fmt.Print("Did NOT decide ")

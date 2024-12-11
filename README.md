@@ -11,27 +11,33 @@ your desired initial values.
 For more details on the available options, read below or type `go run . --help`.
 
 ```
-Usage go-benor:
+Usage of go-benor:
   -S int
         number of phases (default 10)
   -f int
-        max number of stops (default 1)
+        max number of stops (default 4)
   -n int
-        number of processes (default 3)
+        number of processes (default 10)
   -no-progress
         disable the progress bar
+  -odds float
+        the odds of a process to stop. Valid values from 0.0 to 1.0 (default 0.05)
+  -quite
+        no output
   -threads int
-        number of threads to use. Defaults to number of vCPU (default 32)
+        number of threads to use. Defaults to the number of vCPU
   -v string
         initial values of the processes. Example: 1 0 1 1
   -verbose
         print all the messages sent and received in real time
+
 ```
 
 ## Stops
 
 go-benor will randomly stop the processes up to `f` processes. The stop can happen at any time
-before starting a new phase.
+before starting a new phase. You can decide the odds of a process to stop by using the option
+`--odds`.
 
 ## Termination probability
 
@@ -46,7 +52,7 @@ is given by $n * S$.
 After the computation is done, it will print in order:
 
 1. initial values
-2. decisions: 
+2. decisions and at which phase it was taken:
     - 1
     - 0
     - -1 if a process did not decide
@@ -62,22 +68,343 @@ The option `--verbose` can be used to view every sent and received messages and 
 starts a new phase. Do not use this when using big `n` or `S` because the console outputs will slow
 down everything else. The progress bar will not be visible.
 
-### Output example for `go run .`
+### Output example
+
+command: `go run . -n 4 -f 1 --odds 0.8 --verbose`
+
+<details>
+<summary>Verbose Output</summary>
+
 ```
- 100% |██████████████████████████████████████████████████████| (30/30, 58173 it/s)        
------ INIT VALUES -----
-v_0: 0
-v_1: 1
-v_2: 1
------ DECISIONS -----
-P_0 decided: 0
-P_1 decided: 0
-P_2 stopped
------ INFO -----
-n: 3, f: 1, S: 10, majority: 2, termProb:73.69%, fCount: 1
-Decided after 10/10 (100.00%) phases.
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=1 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=1 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=1 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=1 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=1 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:0, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=1 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=2 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=2 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:0, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=2 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=2 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=2 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:0, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=2 s=0
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=1 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:0, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=1 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=1 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=1 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=1 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:1, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=1 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=2 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=2 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=2 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=2 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:1, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=2 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:1, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=2 s=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=1 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=1 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=1 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:1, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=1 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:2, v:1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=1 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=2 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=2 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=1 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=2 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:2, v:1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=2 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=2 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=1 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=1 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:2, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=2 s=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=1 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:2, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=1 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:3, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=1 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=2 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=2 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=1 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=2 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=2 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:3, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=2 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:3, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=2 s=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=1 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=1 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=1 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:3, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=1 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=1 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=2 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:4, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=1 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=2 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:4, v:1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=2 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=2 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=2 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:4, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=2 s=4
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:4, v:-1)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:5, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=3 r=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=3 r=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=1 r=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=1 r=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:1, s:5, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="START PHASE" p=2 r=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:5, v:0)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=Gathering p=2 r=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg=DECIDED decision=0 p=2 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg=DECIDED decision=0 p=3 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=3 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=3 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=2 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=2 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=3 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message received" data="(r:2, s:5, v:0)" from=2 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg=DECIDED decision=0 p=1 s=5
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:1, s:6, v:0)" from=1 to=3
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=1 to=1
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=1 to=2
+time="2024-12-11T21:40:52+01:00" level=debug msg="Message sent" data="(r:2, s:6, v:0)" from=1 to=3
+
 ```
 
+</details>
+
+```
+----- INIT VALUES -----
+v_0: 0
+v_1: 0
+v_2: 1
+v_3: 0
+----- DECISIONS -----
+P_0 stopped at s:1
+P_1 decided: 0 at s:5
+P_2 decided: 0 at s:5
+P_3 decided: 0 at s:5
+----- INFO -----
+n: 4, f: 1, S: 10, majority: 3, termProb:47.55%, fCount: 1, odds of stopping: 0.800000%
+Decided after 5/10 (50.00%) phases.
+```
 
 ## Resources usage
 

@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 )
 
-func shouldStop(f uint64, fCount *atomic.Uint64) bool {
+func shouldStop(f uint64, fCount *atomic.Uint64, odds float64) bool {
 	fCountLocal := fCount.Load()
 	if fCountLocal < f {
-		if stop := rand.Uint32()%21 == 0; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
+		if stop := rand.Float64() <= odds; stop && fCount.CompareAndSwap(fCountLocal, fCountLocal+1) {
 			return true
 		}
 	}

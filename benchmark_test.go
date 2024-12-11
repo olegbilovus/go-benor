@@ -20,7 +20,7 @@ func benOrBench(S int, n int) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			benOr((*processes)[i], S, f, fCount, nil)
+			benOr((*processes)[i], S, f, fCount, 0.05, nil)
 		}()
 	}
 
