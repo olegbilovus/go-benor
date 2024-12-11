@@ -53,6 +53,12 @@ func (p *Process) broadcast(v V) {
 }
 
 func (p *Process) gather() []*Message {
+	log.WithFields(log.Fields{
+		"p": p.i,
+		"r": p.r,
+		"s": p.s,
+	}).Debugln("Gathering")
+
 	msgQueue := p.msgQueue
 	msgs := msgQueue.DequeueEnoughMsg(p.r, p.s)
 
@@ -133,6 +139,15 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, bar *progressbar.Pro
 					"decision": p.decision,
 					"s":        p.s,
 				}).Debugln("DECIDED")
+
+				// you have to send you values to the next phase because some processes may need the to terminate
+				// otherwise, a rare deadlock may happen
+				p.r = 1
+				p.s = p.s + 1
+				p.broadcast(p.decision)
+				p.r = 2
+				p.broadcast(p.decision)
+				p.s = p.s - 1
 
 				return
 
@@ -262,7 +277,7 @@ func main() {
 
 	decided := false
 	fmt.Println("----- DECISIONS -----")
-	maxStates := 0
+	maxStates := 1
 	for _, process := range *processes {
 		if process.stopped {
 			fmt.Printf("P_%v stopped\n", process.i)
@@ -276,7 +291,6 @@ func main() {
 			fmt.Printf("P_%v decided: %v\n", process.i, process.decision)
 		}
 	}
-	maxStates++
 
 	fmt.Println("----- INFO -----")
 	terminateProbability := 1 - math.Pow(1-(1/math.Pow(2, float64(n))), float64(S))
