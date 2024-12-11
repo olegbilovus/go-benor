@@ -23,8 +23,8 @@ type MessageQueue struct {
 	muR1 *sync.Mutex
 	muR2 *sync.Mutex
 
-	notEmptyR1 map[int]*sync.Cond
-	notEmptyR2 map[int]*sync.Cond
+	enoughMsgR1 map[int]*sync.Cond
+	enoughMsgR2 map[int]*sync.Cond
 }
 
 func (mq *MessageQueue) Enqueue(msg *Message) {
@@ -32,17 +32,23 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 
 	msgs := mq.messagesR1
 	mu := mq.muR1
-	notEmpty := mq.notEmptyR1[s]
+	enoughMsg := mq.enoughMsgR1[s]
 	if r == 2 {
 		msgs = mq.messagesR2
 		mu = mq.muR2
-		notEmpty = mq.notEmptyR2[s]
+		enoughMsg = mq.enoughMsgR2[s]
 	}
 
 	mu.Lock()
 	defer mu.Unlock()
 
-	msgQueue := msgs[s]
+	msgQueue, ok := msgs[s]
+
+	// it does not exist only if the msgQueue has already been dequeued when there were enough messages
+	if !ok {
+		return
+	}
+
 	msgQueue = append(msgQueue, msg)
 	if msg.r == 1 {
 		mq.messagesR1[msg.s] = msgQueue
@@ -50,30 +56,27 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 		mq.messagesR2[msg.s] = msgQueue
 	}
 
-	notEmpty.Broadcast()
+	if len(msgQueue) >= n-f {
+		enoughMsg.Broadcast()
+	}
 }
 
-func (mq *MessageQueue) Dequeue(r int, s int) *Message {
+func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) []*Message {
 	msgs := mq.messagesR1
-	notEmpty := mq.notEmptyR1[s]
+	enoughMsg := mq.enoughMsgR1[s]
 	if r == 2 {
 		msgs = mq.messagesR2
-		notEmpty = mq.notEmptyR2[s]
+		enoughMsg = mq.enoughMsgR2[s]
 	}
 
-	notEmpty.L.Lock()
-	defer notEmpty.L.Unlock()
-	for len(msgs[s]) == 0 {
-		notEmpty.Wait()
+	enoughMsg.L.Lock()
+	defer enoughMsg.L.Unlock()
+	for len(msgs[s]) < n-f {
+		enoughMsg.Wait()
 	}
 
-	msg := msgs[s][0]
-	msgs[s] = msgs[s][1:]
-	if msg.r == 1 {
-		mq.messagesR1[msg.s] = msgs[s]
-	} else {
-		mq.messagesR2[msg.s] = msgs[s]
-	}
+	msgsDequeued := msgs[s]
+	delete(msgs, s)
 
-	return msg
+	return msgsDequeued
 }

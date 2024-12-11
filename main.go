@@ -38,6 +38,9 @@ func (p *Process) broadcast(v V) {
 	}
 
 	for _, process := range *p.processes {
+		if process.stopped || process.s > p.s {
+			continue
+		}
 		process.msgQueue.Enqueue(msg)
 
 		log.WithFields(log.Fields{
@@ -49,13 +52,10 @@ func (p *Process) broadcast(v V) {
 }
 
 func (p *Process) gather() []*Message {
-	var msgs []*Message
 	msgQueue := p.msgQueue
+	msgs := msgQueue.DequeueEnoughMsg(p.r, p.s)
 
-	for len(msgs) < n-f {
-		msg := msgQueue.Dequeue(p.r, p.s)
-		msgs = append(msgs, msg)
-
+	for _, msg := range msgs {
 		log.WithFields(log.Fields{
 			"from": msg.p,
 			"to":   p.i,
@@ -87,6 +87,7 @@ func benOr(p *Process) {
 
 		if shouldStop() {
 			p.stopped = true
+			_ = bar.Add(S - p.s)
 			return
 		}
 
@@ -223,15 +224,15 @@ func main() {
 			muR1: &sync.Mutex{},
 			muR2: &sync.Mutex{},
 
-			notEmptyR1: make(map[int]*sync.Cond, S),
-			notEmptyR2: make(map[int]*sync.Cond, S),
+			enoughMsgR1: make(map[int]*sync.Cond, S),
+			enoughMsgR2: make(map[int]*sync.Cond, S),
 		}
 
 		for s := range S {
 			msgQueue.messagesR1[s] = make([]*Message, 0)
 			msgQueue.messagesR2[s] = make([]*Message, 0)
-			msgQueue.notEmptyR1[s] = sync.NewCond(msgQueue.muR1)
-			msgQueue.notEmptyR2[s] = sync.NewCond(msgQueue.muR2)
+			msgQueue.enoughMsgR1[s] = sync.NewCond(msgQueue.muR1)
+			msgQueue.enoughMsgR2[s] = sync.NewCond(msgQueue.muR2)
 		}
 
 		process := &Process{
@@ -269,7 +270,9 @@ func main() {
 		if process.stopped {
 			fmt.Printf("P_%v stopped\n", process.i)
 		} else {
-			decided = true
+			if !decided && process.decision != NULL {
+				decided = true
+			}
 			fmt.Printf("P_%v decided: %v\n", process.i, process.decision)
 		}
 	}
