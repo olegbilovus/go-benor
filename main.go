@@ -215,6 +215,7 @@ func main() {
 	flag.IntVar(&S, "S", 10, "number of phases")
 	odds := flag.Float64("odds", 0.05, "the odds of a process to stop. Valid values from 0.0 to 1.0")
 	threads := flag.Int("threads", runtime.NumCPU(), "number of threads to use. Defaults to number of vCPU")
+	csv := flag.Bool("csv", false, "print the the stats in csv format. Headers: n,f,fCount,S,maxS,decision,countViEQ0,countViEQ1")
 	verbose := flag.Bool("verbose", false, "print all the messages sent and received in real time")
 	disableProgressBar := flag.Bool("no-progress", false, "disable the progress bar")
 	quite := flag.Bool("quite", false, "no output")
@@ -252,7 +253,7 @@ func main() {
 	}
 
 	var bar *progressbar.ProgressBar = nil
-	if !*disableProgressBar && !*quite {
+	if !*disableProgressBar && !*quite && !*csv {
 		bar = progressbar.Default(int64(n * S))
 	}
 
@@ -276,6 +277,30 @@ func main() {
 		return
 	}
 
+	if *csv {
+		decision := V(NULL)
+		maxPhases := 1
+		countViEQ0 := 0
+		countViEQ1 := 0
+		for _, process := range *processes {
+			if process.decision != NULL {
+				decision = process.decision
+			}
+			if process.s > maxPhases {
+				maxPhases = process.s
+			}
+			if process.v == 0 {
+				countViEQ0 += 1
+			} else {
+				countViEQ1 += 1
+			}
+		}
+
+		fmt.Printf("%d,%d,%d,%d,%d,%d,%d,%d\n", n, f, fCount.Load(), S, maxPhases, decision, countViEQ0, countViEQ1)
+
+		return
+	}
+
 	fmt.Println("----- INIT VALUES -----")
 	for i, v := range vi {
 		fmt.Printf("v_%v: %v\n", i, v)
@@ -283,7 +308,7 @@ func main() {
 
 	decided := false
 	fmt.Println("----- DECISIONS -----")
-	maxStates := 1
+	maxPhases := 1
 	for _, process := range *processes {
 		if process.stopped {
 			fmt.Printf("P_%v stopped ", process.i)
@@ -291,8 +316,8 @@ func main() {
 			if !decided && process.decision != NULL {
 				decided = true
 			}
-			if process.s > maxStates {
-				maxStates = process.s
+			if process.s > maxPhases {
+				maxPhases = process.s
 			}
 			fmt.Printf("P_%v decided: %v ", process.i, process.decision)
 		}
@@ -312,5 +337,5 @@ func main() {
 	} else {
 		fmt.Print("Decided ")
 	}
-	fmt.Printf("after %v/%v (%.2f%%) phases.\n", maxStates, S, float64(maxStates*100)/float64(S))
+	fmt.Printf("after %v/%v (%.2f%%) phases.\n", maxPhases, S, float64(maxPhases*100)/float64(S))
 }

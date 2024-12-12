@@ -406,6 +406,27 @@ n: 4, f: 1, S: 10, majority: 3, termProb:47.55%, fCount: 1, odds of stopping: 0.
 Decided after 5/10 (50.00%) phases.
 ```
 
+## CSV Output
+
+You can use the option `--csv` to print on stdout the result as a csv.
+It will not print the headers to allow to redirect and appends the output to an already existing csv
+file.
+
+The csv values are: `n,f,fCount,S,maxPhases,decision,countViEQ0,countViEQ1`
+
+### CSV output example
+
+command: `go run . -n 1000 -f 300 -S 25 --csv --odds 1.0`
+
+output: `1000,300,300,25,25,-1,493,507`
+
+### CSV File example
+
+| n  | f | fCount | S  | maxPhases | decision | countViEQ0 | countViEQ1 |
+|----|---|--------|----|-----------|----------|------------|------------|
+| 3  | 0 | 0      | 1  | 1         | 1        | 1          | 2          |
+| 10 | 4 | 2      | 10 | 3         | 0        | 6          | 4          |
+
 ## Resources usage
 
 For a big `n` or `S`, >= 10000, go-benor will start using a lot of memory and computation. At some
