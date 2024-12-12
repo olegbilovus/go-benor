@@ -11,9 +11,11 @@ your desired initial values.
 For more details on the available options, read below or type `go run . --help`.
 
 ```
-Usage of go-benor:
+Usage of /tmp/go-build3847868635/b001/exe/go-benor:
   -S int
         number of phases (default 10)
+  -csv
+        print the the stats in csv format. Headers: n,f,fCount,S,maxS,decision,countViEQ0,countViEQ1
   -f int
         max number of stops (default 4)
   -n int
@@ -25,12 +27,11 @@ Usage of go-benor:
   -quite
         no output
   -threads int
-        number of threads to use. Defaults to the number of vCPU
+        number of threads to use. Defaults to number of vCPU
   -v string
         initial values of the processes. Example: 1 0 1 1
   -verbose
         print all the messages sent and received in real time
-
 ```
 
 ## Stops
