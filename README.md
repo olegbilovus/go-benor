@@ -428,6 +428,9 @@ output: `1000,300,300,25,25,-1,493,507`
 | 3  | 0 | 0      | 1  | 1         | 1        | 1          | 2          |
 | 10 | 4 | 2      | 10 | 3         | 0        | 6          | 4          |
 
+There is a [results.csv](results.csv) which contains almost 100k entries of an experiment
+using [stats.sh](stats.sh).
+
 ## Resources usage
 
 For a big `n` or `S`, >= 10000, go-benor will start using a lot of memory and computation. At some
