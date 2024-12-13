@@ -6,9 +6,11 @@ array_S=(1 5 10 15 20 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100)
 
 >&2 echo "n,f,fCount,S,maxS,decision,countViEQ0,countViEQ1"
 
-total=$(expr "${#array_N[@]}" \* "${#array_S[@]}" \* 3 \* 10 )
+total=$(expr "${#array_N[@]}" \* "${#array_S[@]}" \* 3 \* 100 )
 
 >&2 echo "total: $total"
+
+go build .
 
 for n in "${array_N[@]}"
 do
@@ -20,7 +22,7 @@ do
     for f in "${array_F[@]}"
     do
 
-      for i in {1..10}
+      for i in {1..100}
       do
 
         start=$(date +%s.%N)
@@ -32,7 +34,7 @@ do
                 fi
 
         dur=$(echo "$(date +%s.%N) - $start" | bc)
-        >&2 echo "n: $n, S: $S, f: $f, i: $i ($dur s)"
+        >&2 echo "n: $n, S: $S, f: $f, i: $i ($dur secs)"
 
       done
 
