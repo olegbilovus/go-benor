@@ -439,7 +439,7 @@ things.
 
 ## Orange Data Mining
 
-[stats.owg](stats.ows) contains a workspace to view the csv data, by default it will use the
+[stats.ows](stats.ows) contains a workspace to view the csv data, by default it will use the
 [results.csv](results.csv) file as data input. [Orange Data Mining](https://orangedatamining.com/) is
 needed to view the charts.
 
