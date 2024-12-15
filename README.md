@@ -437,5 +437,17 @@ For a big `n` or `S`, >= 10000, go-benor will start using a lot of memory and co
 point, the progress bar may seem to be stuck, but it is the Garbage Collector in GO doing its
 things.
 
+## Orange Data Mining
 
+[stats.owg](stats.ows) contains a workspace to view the csv data, by default it will use the
+[results.csv](results.csv) file as data input. [Orange Data Mining](https://orangedatamining.com/) is
+needed to view the charts.
+
+### Screenshots
+Some screenshots from the workspace. A lot more charts and data visualization can be added.
+
+![img.png](ows_screenshots/workspace.png)
+![img.png](ows_screenshots/S_increased.png)
+![img.png](ows_screenshots/f_increased.png)
+![img.png](ows_screenshots/fCase.png)
 
