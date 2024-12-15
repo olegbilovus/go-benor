@@ -446,8 +446,8 @@ needed to view the charts.
 ### Screenshots
 Some screenshots from the workspace. A lot more charts and data visualization can be added.
 
-![img.png](ows_screenshots/workspace.png)
-![img.png](ows_screenshots/S_increased.png)
-![img.png](ows_screenshots/f_increased.png)
-![img.png](ows_screenshots/fCase.png)
+![workspace](ows_screenshots/workspace.png)
+![S_increased](ows_screenshots/S_increased.png)
+![f_increased](ows_screenshots/f_increased.png)
+![fCase](ows_screenshots/fCase.png)
 
