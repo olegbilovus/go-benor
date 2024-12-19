@@ -51,26 +51,14 @@ func (p *Process) broadcast(v V) {
 	}
 }
 
-func (p *Process) gather() []*Message {
+func (p *Process) gather() []*atomic.Uint64 {
 	log.Debug(Fields{
 		"p": p.i,
 		"r": p.r,
 		"s": p.s,
 	}, "Gathering")
 
-	msgQueue := p.msgQueue
-	msgs := msgQueue.DequeueEnoughMsg(p.r, p.s)
-
-	for _, msg := range msgs {
-		log.Debug(Fields{
-			"from": msg.p,
-			"to":   p.i,
-			"data": msg,
-		}, "Message received")
-
-	}
-
-	return msgs
+	return p.msgQueue.DequeueEnoughMsg(p.r, p.s)
 }
 
 //goland:noinspection t
@@ -79,9 +67,7 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 	var y V = NULL
 
 	fUint64 := uint64(f)
-	majority := int(len(*(p.processes))/2) + 1
-
-	count := make(map[V]int, 3) // 3 because it will only be 0, 1, -1
+	majority := uint64(len(*(p.processes))/2) + 1
 
 	for p.s = 0; p.s < S; p.s++ {
 		progressAdd(bar, 1) // progress bar
@@ -105,13 +91,15 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 		}, "START PHASE")
 
 		p.broadcast(x)
-		msgsR1 := p.gather()
+		countR1 := p.gather()
 
-		resetCount(count)
-		for _, msg := range msgsR1 {
-			count[msg.v] += 1
-			if count[msg.v] >= majority {
-				y = msg.v
+		for i := range 3 {
+			if countR1[i].Load() >= majority {
+				if i == NULL_POS {
+					y = V(NULL)
+				} else {
+					y = V(i)
+				}
 				break
 			} else {
 				y = NULL
@@ -128,13 +116,12 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 		}, "START PHASE")
 
 		p.broadcast(y)
-		msgsR2 := p.gather()
+		countR2 := p.gather()
 
-		resetCount(count)
-		for _, msg := range msgsR2 {
-			count[msg.v] += 1
-			if msg.v != NULL && count[msg.v] >= f+1 {
-				p.decision = msg.v
+		msgsAllNULL := true
+		for i := range 3 {
+			if i != NULL_POS && countR2[i].Load() >= fUint64+1 {
+				p.decision = V(i)
 
 				log.Debug(Fields{
 					"p":        p.i,
@@ -142,24 +129,27 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 					"s":        p.s,
 				}, "DECIDED")
 
-				// you have to send the values to the next phase because some processes may need them to terminate
-				// otherwise, a rare deadlock may happen
-				p.r = 1
-				p.s = p.s + 1
-				p.broadcast(p.decision)
-				p.r = 2
-				p.broadcast(p.decision)
-				p.s = p.s - 1
+				if p.s < S {
+					// you have to send the values to the next phase because some processes may need them to terminate
+					// otherwise, a rare deadlock may happen
+					p.r = 1
+					p.s = p.s + 1
+					p.broadcast(p.decision)
+					p.r = 2
+					p.broadcast(p.decision)
+					p.s = p.s - 1
+				}
 
 				return
 
-			} else if msg.v != NULL {
-				x = msg.v
+			} else if i != NULL_POS {
+				x = V(i)
+				msgsAllNULL = false
 			}
 		}
 
 		// if all the messages were NULL
-		if count[NULL] == len(msgsR2) {
+		if msgsAllNULL {
 			x = V(0)
 			if rand.Int()%2 == 0 {
 				x = V(1)
@@ -174,22 +164,25 @@ func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
 	processes := make([]*Process, n)
 	for i := 0; i < n; i++ {
 		msgQueue := &MessageQueue{
-			messagesR1: make(map[int][]*Message, S),
-			messagesR2: make(map[int][]*Message, S),
+			messagesR1: make([][]*atomic.Uint64, S),
+			messagesR2: make([][]*atomic.Uint64, S),
 
-			muR1: &sync.Mutex{},
-			muR2: &sync.Mutex{},
-
-			enoughMsg:       n - f,
-			enoughMsgCondR1: make(map[int]*sync.Cond, S),
-			enoughMsgCondR2: make(map[int]*sync.Cond, S),
+			enoughMsg:       uint64(n - f),
+			enoughMsgCondR1: make([]*sync.Cond, S),
+			enoughMsgCondR2: make([]*sync.Cond, S),
 		}
 
 		for s := range S {
-			msgQueue.messagesR1[s] = make([]*Message, 0)
-			msgQueue.messagesR2[s] = make([]*Message, 0)
-			msgQueue.enoughMsgCondR1[s] = sync.NewCond(msgQueue.muR1)
-			msgQueue.enoughMsgCondR2[s] = sync.NewCond(msgQueue.muR2)
+			msgQueue.messagesR1[s] = make([]*atomic.Uint64, 3)
+			msgQueue.messagesR2[s] = make([]*atomic.Uint64, 3)
+
+			for j := range 3 {
+				msgQueue.messagesR1[s][j] = &atomic.Uint64{}
+				msgQueue.messagesR2[s][j] = &atomic.Uint64{}
+			}
+
+			msgQueue.enoughMsgCondR1[s] = sync.NewCond(&sync.Mutex{})
+			msgQueue.enoughMsgCondR2[s] = sync.NewCond(&sync.Mutex{})
 		}
 
 		process := &Process{

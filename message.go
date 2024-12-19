@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 )
 
 type Message struct {
@@ -16,53 +17,52 @@ func (m *Message) String() string {
 	return fmt.Sprintf("(r:%v, s:%v, v:%v)", m.r, m.s, m.v)
 }
 
+const NULL_POS = 2
+
 type MessageQueue struct {
-	messagesR1 map[int][]*Message
-	messagesR2 map[int][]*Message
+	messagesR1 [][]*atomic.Uint64
+	messagesR2 [][]*atomic.Uint64
 
-	muR1 *sync.Mutex
-	muR2 *sync.Mutex
+	enoughMsg       uint64
+	enoughMsgCondR1 []*sync.Cond
+	enoughMsgCondR2 []*sync.Cond
+}
 
-	enoughMsg       int
-	enoughMsgCondR1 map[int]*sync.Cond
-	enoughMsgCondR2 map[int]*sync.Cond
+func (mq *MessageQueue) HasEnoughMsgs(r int, s int) bool {
+	msgs := mq.messagesR1
+	if r == 2 {
+		msgs = mq.messagesR2
+	}
+
+	if msgs[s][0].Load()+msgs[s][1].Load()+msgs[s][NULL_POS].Load() >= mq.enoughMsg {
+		return true
+	}
+
+	return false
 }
 
 func (mq *MessageQueue) Enqueue(msg *Message) {
 	r, s := msg.r, msg.s
 
 	msgs := mq.messagesR1
-	mu := mq.muR1
 	enoughMsgCond := mq.enoughMsgCondR1[s]
 	if r == 2 {
 		msgs = mq.messagesR2
-		mu = mq.muR2
 		enoughMsgCond = mq.enoughMsgCondR2[s]
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	msgQueue, ok := msgs[s]
-
-	// it does not exist only if the msgQueue has already been dequeued when there were enough messages
-	if !ok {
-		return
+	i := msg.v
+	if msg.v == NULL {
+		i = NULL_POS
 	}
+	msgs[s][i].Add(1)
 
-	msgQueue = append(msgQueue, msg)
-	if msg.r == 1 {
-		mq.messagesR1[msg.s] = msgQueue
-	} else {
-		mq.messagesR2[msg.s] = msgQueue
-	}
-
-	if len(msgQueue) >= mq.enoughMsg {
+	if mq.HasEnoughMsgs(r, s) {
 		enoughMsgCond.Broadcast()
 	}
 }
 
-func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) []*Message {
+func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) []*atomic.Uint64 {
 	msgs := mq.messagesR1
 	enoughMsgCond := mq.enoughMsgCondR1[s]
 	if r == 2 {
@@ -72,12 +72,9 @@ func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) []*Message {
 
 	enoughMsgCond.L.Lock()
 	defer enoughMsgCond.L.Unlock()
-	for len(msgs[s]) < mq.enoughMsg {
+	for !mq.HasEnoughMsgs(r, s) {
 		enoughMsgCond.Wait()
 	}
 
-	msgsDequeued := msgs[s]
-	delete(msgs, s)
-
-	return msgsDequeued
+	return msgs[s]
 }
