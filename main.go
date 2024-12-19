@@ -119,8 +119,9 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 		countR2 := p.gather()
 
 		msgsAllNULL := true
-		for i := range 3 {
-			if i != NULL_POS && countR2[i].Load() >= fUint64+1 {
+		// range up to 1 because we do not want NULL values here, which is at index 2
+		for i := range 2 {
+			if countR2[i].Load() >= fUint64+1 {
 				p.decision = V(i)
 
 				log.Debug(Fields{
@@ -129,20 +130,18 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 					"s":        p.s,
 				}, "DECIDED")
 
-				if p.s < S {
-					// you have to send the values to the next phase because some processes may need them to terminate
-					// otherwise, a rare deadlock may happen
-					p.r = 1
-					p.s = p.s + 1
-					p.broadcast(p.decision)
-					p.r = 2
-					p.broadcast(p.decision)
-					p.s = p.s - 1
-				}
+				// you have to send the values to the next phase because some processes may need them to terminate
+				// otherwise, a rare deadlock may happen
+				p.r = 1
+				p.s = p.s + 1
+				p.broadcast(p.decision)
+				p.r = 2
+				p.broadcast(p.decision)
+				p.s = p.s - 1
 
 				return
 
-			} else if i != NULL_POS {
+			} else if countR2[i].Load() > 0 {
 				x = V(i)
 				msgsAllNULL = false
 			}
@@ -164,15 +163,15 @@ func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
 	processes := make([]*Process, n)
 	for i := 0; i < n; i++ {
 		msgQueue := &MessageQueue{
-			messagesR1: make([][]*atomic.Uint64, S),
-			messagesR2: make([][]*atomic.Uint64, S),
+			messagesR1: make([][]*atomic.Uint64, S+1),
+			messagesR2: make([][]*atomic.Uint64, S+1),
 
 			enoughMsg:       uint64(n - f),
-			enoughMsgCondR1: make([]*sync.Cond, S),
-			enoughMsgCondR2: make([]*sync.Cond, S),
+			enoughMsgCondR1: make([]*sync.Cond, S+1),
+			enoughMsgCondR2: make([]*sync.Cond, S+1),
 		}
 
-		for s := range S {
+		for s := range S + 1 {
 			msgQueue.messagesR1[s] = make([]*atomic.Uint64, 3)
 			msgQueue.messagesR2[s] = make([]*atomic.Uint64, 3)
 
