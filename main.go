@@ -31,16 +31,17 @@ type Process struct {
 
 func (p *Process) broadcast(v V) {
 	msg := &Message{
-		r: p.r,
-		s: p.s,
-		v: v,
-		p: p.i,
+		r:      p.r,
+		s:      p.s,
+		v:      v,
+		sender: p.i,
 	}
 
 	for _, process := range *p.processes {
 		if process.stopped || process.s > p.s {
 			continue
 		}
+		msg.receiver = process.i
 		process.msgQueue.Enqueue(msg)
 
 		log.Debug(Fields{
@@ -51,24 +52,20 @@ func (p *Process) broadcast(v V) {
 	}
 }
 
-func (p *Process) gather() []*Message {
+func (p *Process) gather() [MsgTypes]uint64 {
 	log.Debug(Fields{
 		"p": p.i,
 		"r": p.r,
 		"s": p.s,
 	}, "Gathering")
 
-	msgQueue := p.msgQueue
-	msgs := msgQueue.DequeueEnoughMsg(p.r, p.s)
+	msgs := p.msgQueue.DequeueEnoughMsg(p.r, p.s)
 
-	for _, msg := range msgs {
-		log.Debug(Fields{
-			"from": msg.p,
-			"to":   p.i,
-			"data": msg,
-		}, "Message received")
-
-	}
+	log.Debug(Fields{
+		"p": p.i,
+		"r": p.r,
+		"s": p.s,
+	}, "Received enough messages")
 
 	return msgs
 }
@@ -79,9 +76,7 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 	var y V = NULL
 
 	fUint64 := uint64(f)
-	majority := int(len(*(p.processes))/2) + 1
-
-	count := make(map[V]int, 3) // 3 because it will only be 0, 1, -1
+	majority := uint64(len(*(p.processes))/2) + 1
 
 	for p.s = 0; p.s < S; p.s++ {
 		progressAdd(bar, 1) // progress bar
@@ -105,13 +100,15 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 		}, "START PHASE")
 
 		p.broadcast(x)
-		msgsR1 := p.gather()
+		countR1 := p.gather()
 
-		resetCount(count)
-		for _, msg := range msgsR1 {
-			count[msg.v] += 1
-			if count[msg.v] >= majority {
-				y = msg.v
+		for i := range MsgTypes {
+			if countR1[i] >= majority {
+				if i == NullPos {
+					y = V(NULL)
+				} else {
+					y = V(i)
+				}
 				break
 			} else {
 				y = NULL
@@ -128,13 +125,13 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 		}, "START PHASE")
 
 		p.broadcast(y)
-		msgsR2 := p.gather()
+		countR2 := p.gather()
 
-		resetCount(count)
-		for _, msg := range msgsR2 {
-			count[msg.v] += 1
-			if msg.v != NULL && count[msg.v] >= f+1 {
-				p.decision = msg.v
+		msgsAllNULL := true
+		// range up to 1 because we do not want NULL values here, which is at index 2
+		for i := range MsgTypes - 1 {
+			if countR2[i] >= fUint64+1 {
+				p.decision = V(i)
 
 				log.Debug(Fields{
 					"p":        p.i,
@@ -153,13 +150,14 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 
 				return
 
-			} else if msg.v != NULL {
-				x = msg.v
+			} else if countR2[i] > 0 {
+				x = V(i)
+				msgsAllNULL = false
 			}
 		}
 
 		// if all the messages were NULL
-		if count[NULL] == len(msgsR2) {
+		if msgsAllNULL {
 			x = V(0)
 			if rand.Int()%2 == 0 {
 				x = V(1)
@@ -174,22 +172,20 @@ func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
 	processes := make([]*Process, n)
 	for i := 0; i < n; i++ {
 		msgQueue := &MessageQueue{
-			messagesR1: make(map[int][]*Message, S),
-			messagesR2: make(map[int][]*Message, S),
+			messagesR1: make([][MsgTypes]uint64, S+1),
+			messagesR2: make([][MsgTypes]uint64, S+1),
 
-			muR1: &sync.Mutex{},
-			muR2: &sync.Mutex{},
-
-			enoughMsg:       n - f,
-			enoughMsgCondR1: make(map[int]*sync.Cond, S),
-			enoughMsgCondR2: make(map[int]*sync.Cond, S),
+			enoughMsg:       uint64(n - f),
+			enoughMsgCondR1: make([]*sync.Cond, S+1),
+			enoughMsgCondR2: make([]*sync.Cond, S+1),
 		}
 
-		for s := range S {
-			msgQueue.messagesR1[s] = make([]*Message, 0)
-			msgQueue.messagesR2[s] = make([]*Message, 0)
-			msgQueue.enoughMsgCondR1[s] = sync.NewCond(msgQueue.muR1)
-			msgQueue.enoughMsgCondR2[s] = sync.NewCond(msgQueue.muR2)
+		for s := range S + 1 {
+			msgQueue.messagesR1[s] = [MsgTypes]uint64{0, 0, 0}
+			msgQueue.messagesR2[s] = [MsgTypes]uint64{0, 0, 0}
+
+			msgQueue.enoughMsgCondR1[s] = sync.NewCond(&sync.Mutex{})
+			msgQueue.enoughMsgCondR2[s] = sync.NewCond(&sync.Mutex{})
 		}
 
 		process := &Process{

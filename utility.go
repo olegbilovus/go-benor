@@ -24,12 +24,6 @@ func progressAdd(bar *progressbar.ProgressBar, i int) {
 	}
 }
 
-func resetCount(count map[V]int) {
-	count[0] = 0
-	count[1] = 0
-	count[NULL] = 0
-}
-
 func randomVi(n int) []V {
 	vi := make([]V, n)
 	for i := 0; i < n; i++ {
