@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
 )
 
 type Message struct {
-	r int
-	s int
-	v V
-	p int
+	r        int
+	s        int
+	v        V
+	sender   int
+	receiver int
 }
 
 func (m *Message) String() string {
@@ -21,8 +21,8 @@ const NullPos = 2
 const MsgTypes = 3
 
 type MessageQueue struct {
-	messagesR1 [][MsgTypes]*atomic.Uint64
-	messagesR2 [][MsgTypes]*atomic.Uint64
+	messagesR1 [][MsgTypes]uint64
+	messagesR2 [][MsgTypes]uint64
 
 	enoughMsg       uint64
 	enoughMsgCondR1 []*sync.Cond
@@ -35,11 +35,7 @@ func (mq *MessageQueue) HasEnoughMsgs(r int, s int) bool {
 		msgs = mq.messagesR2
 	}
 
-	if msgs[s][0].Load()+msgs[s][1].Load()+msgs[s][NullPos].Load() >= mq.enoughMsg {
-		return true
-	}
-
-	return false
+	return msgs[s][0]+msgs[s][1]+msgs[s][NullPos] >= mq.enoughMsg
 }
 
 func (mq *MessageQueue) Enqueue(msg *Message) {
@@ -56,14 +52,17 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 	if msg.v == NULL {
 		i = NullPos
 	}
-	msgs[s][i].Add(1)
+
+	enoughMsgCond.L.Lock()
+	msgs[s][i] += 1
+	enoughMsgCond.L.Unlock()
 
 	if mq.HasEnoughMsgs(r, s) {
 		enoughMsgCond.Broadcast()
 	}
 }
 
-func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) [MsgTypes]*atomic.Uint64 {
+func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) [MsgTypes]uint64 {
 	msgs := mq.messagesR1
 	enoughMsgCond := mq.enoughMsgCondR1[s]
 	if r == 2 {
