@@ -17,11 +17,12 @@ func (m *Message) String() string {
 	return fmt.Sprintf("(r:%v, s:%v, v:%v)", m.r, m.s, m.v)
 }
 
-const NULL_POS = 2
+const NullPos = 2
+const MsgTypes = 3
 
 type MessageQueue struct {
-	messagesR1 [][]*atomic.Uint64
-	messagesR2 [][]*atomic.Uint64
+	messagesR1 [][MsgTypes]*atomic.Uint64
+	messagesR2 [][MsgTypes]*atomic.Uint64
 
 	enoughMsg       uint64
 	enoughMsgCondR1 []*sync.Cond
@@ -34,7 +35,7 @@ func (mq *MessageQueue) HasEnoughMsgs(r int, s int) bool {
 		msgs = mq.messagesR2
 	}
 
-	if msgs[s][0].Load()+msgs[s][1].Load()+msgs[s][NULL_POS].Load() >= mq.enoughMsg {
+	if msgs[s][0].Load()+msgs[s][1].Load()+msgs[s][NullPos].Load() >= mq.enoughMsg {
 		return true
 	}
 
@@ -53,7 +54,7 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 
 	i := msg.v
 	if msg.v == NULL {
-		i = NULL_POS
+		i = NullPos
 	}
 	msgs[s][i].Add(1)
 
@@ -62,7 +63,7 @@ func (mq *MessageQueue) Enqueue(msg *Message) {
 	}
 }
 
-func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) []*atomic.Uint64 {
+func (mq *MessageQueue) DequeueEnoughMsg(r int, s int) [MsgTypes]*atomic.Uint64 {
 	msgs := mq.messagesR1
 	enoughMsgCond := mq.enoughMsgCondR1[s]
 	if r == 2 {

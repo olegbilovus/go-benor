@@ -51,7 +51,7 @@ func (p *Process) broadcast(v V) {
 	}
 }
 
-func (p *Process) gather() []*atomic.Uint64 {
+func (p *Process) gather() [MsgTypes]*atomic.Uint64 {
 	log.Debug(Fields{
 		"p": p.i,
 		"r": p.r,
@@ -93,9 +93,9 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 		p.broadcast(x)
 		countR1 := p.gather()
 
-		for i := range 3 {
+		for i := range MsgTypes {
 			if countR1[i].Load() >= majority {
-				if i == NULL_POS {
+				if i == NullPos {
 					y = V(NULL)
 				} else {
 					y = V(i)
@@ -120,7 +120,7 @@ func benOr(p *Process, S int, f int, fCount *atomic.Uint64, odds float64, bar *p
 
 		msgsAllNULL := true
 		// range up to 1 because we do not want NULL values here, which is at index 2
-		for i := range 2 {
+		for i := range MsgTypes - 1 {
 			if countR2[i].Load() >= fUint64+1 {
 				p.decision = V(i)
 
@@ -163,8 +163,8 @@ func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
 	processes := make([]*Process, n)
 	for i := 0; i < n; i++ {
 		msgQueue := &MessageQueue{
-			messagesR1: make([][]*atomic.Uint64, S+1),
-			messagesR2: make([][]*atomic.Uint64, S+1),
+			messagesR1: make([][MsgTypes]*atomic.Uint64, S+1),
+			messagesR2: make([][MsgTypes]*atomic.Uint64, S+1),
 
 			enoughMsg:       uint64(n - f),
 			enoughMsgCondR1: make([]*sync.Cond, S+1),
@@ -172,13 +172,8 @@ func SetupProcesses(n int, f int, S int, vi []V) *[]*Process {
 		}
 
 		for s := range S + 1 {
-			msgQueue.messagesR1[s] = make([]*atomic.Uint64, 3)
-			msgQueue.messagesR2[s] = make([]*atomic.Uint64, 3)
-
-			for j := range 3 {
-				msgQueue.messagesR1[s][j] = &atomic.Uint64{}
-				msgQueue.messagesR2[s][j] = &atomic.Uint64{}
-			}
+			msgQueue.messagesR1[s] = [MsgTypes]*atomic.Uint64{{}, {}, {}}
+			msgQueue.messagesR2[s] = [MsgTypes]*atomic.Uint64{{}, {}, {}}
 
 			msgQueue.enoughMsgCondR1[s] = sync.NewCond(&sync.Mutex{})
 			msgQueue.enoughMsgCondR2[s] = sync.NewCond(&sync.Mutex{})
